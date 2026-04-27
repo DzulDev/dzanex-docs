@@ -47,7 +47,7 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 to-blue-700 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-[#1B3A5C] to-[#57A9A9] flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
         <div className="text-center mb-8">
           <img src="/logo.png" alt="Dzanex Technology" className="w-28 mx-auto mb-4 object-contain" />
@@ -74,7 +74,7 @@ export default function Login() {
           <button
             onClick={handleLogin}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-2 bg-blue-700 text-white py-3 rounded-xl font-semibold hover:bg-blue-800 disabled:opacity-60 transition-colors"
+            className="w-full flex items-center justify-center gap-2 bg-[#1B3A5C] text-white py-3 rounded-xl font-semibold hover:bg-[#57A9A9] disabled:opacity-60 transition-colors"
           >
             {loading ? <Loader2 size={18} className="animate-spin" /> : (
               <svg className="w-5 h-5" viewBox="0 0 24 24">

@@ -6,24 +6,20 @@ import { getRows, getToken } from "../utils/google";
 import { format } from "date-fns";
 
 const CARDS = [
-  { type: "Quotation", label: "Quotations", icon: FileText, color: "blue", to: "/quotation" },
-  { type: "Invoice", label: "Invoices", icon: Receipt, color: "green", to: "/invoice" },
-  { type: "PO", label: "Purchase Orders", icon: ShoppingCart, color: "purple", to: "/po" },
-  { type: "DO", label: "Delivery Orders", icon: Truck, color: "orange", to: "/do" },
+  { type: "Quotation", label: "Quotations", icon: FileText, color: "teal", to: "/quotation" },
+  { type: "Invoice", label: "Invoices", icon: Receipt, color: "teal", to: "/invoice" },
+  { type: "PO", label: "Purchase Orders", icon: ShoppingCart, color: "coral", to: "/po" },
+  { type: "DO", label: "Delivery Orders", icon: Truck, color: "coral", to: "/do" },
 ];
 
 const COLOR = {
-  blue: "bg-blue-50 text-blue-700 border-blue-200",
-  green: "bg-green-50 text-green-700 border-green-200",
-  purple: "bg-purple-50 text-purple-700 border-purple-200",
-  orange: "bg-orange-50 text-orange-700 border-orange-200",
+  teal:  "bg-[#EBF6F6] text-[#3A8A8A] border-[#57A9A9]/30",
+  coral: "bg-[#FDF1EE] text-[#C2614A] border-[#E8917A]/30",
 };
 
 const ICON_BG = {
-  blue: "bg-blue-100 text-blue-700",
-  green: "bg-green-100 text-green-700",
-  purple: "bg-purple-100 text-purple-700",
-  orange: "bg-orange-100 text-orange-700",
+  teal:  "bg-[#57A9A9]/20 text-[#3A8A8A]",
+  coral: "bg-[#E8917A]/20 text-[#C2614A]",
 };
 
 export default function Dashboard() {
