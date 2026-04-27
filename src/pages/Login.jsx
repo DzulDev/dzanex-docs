@@ -6,7 +6,8 @@ import { createSpreadsheet, initSheetHeaders, ensureDriveFolder } from "../utils
 import { Loader2 } from "lucide-react";
 
 export default function Login() {
-  const [clientId, setClientId] = useState(getConfig().clientId || "");
+  const DEFAULT_CLIENT_ID = "951409197659-jltf9l48kd0hveptnbd1vuduqghek8op.apps.googleusercontent.com";
+  const [clientId, setClientId] = useState(getConfig().clientId || DEFAULT_CLIENT_ID);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
