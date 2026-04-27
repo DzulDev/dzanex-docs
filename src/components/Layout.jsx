@@ -28,14 +28,14 @@ export default function Layout({ children }) {
     <div className="flex h-screen bg-gray-50 overflow-hidden">
       {/* Sidebar */}
       <aside className={`
-        fixed inset-y-0 left-0 z-30 w-60 bg-blue-900 text-white flex flex-col
+        fixed inset-y-0 left-0 z-30 w-60 bg-[#1B3A5C] text-white flex flex-col
         transform transition-transform duration-200
         ${open ? "translate-x-0" : "-translate-x-full"}
         lg:relative lg:translate-x-0
       `}>
-        <div className="px-5 py-5 border-b border-blue-800">
-          <p className="text-xs text-blue-300 font-medium">DZANEX TECHNOLOGY</p>
-          <p className="text-xs text-blue-400 mt-0.5">TR0320764-P</p>
+        <div className="px-5 py-5 border-b border-[#57A9A9]/30">
+          <p className="text-xs text-[#57A9A9] font-medium">DZANEX TECHNOLOGY</p>
+          <p className="text-xs text-[#57A9A9]/70 mt-0.5">TR0320764-P</p>
         </div>
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {NAV.map(({ to, icon: Icon, label }) => (
@@ -47,8 +47,8 @@ export default function Layout({ children }) {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
                 ${isActive
-                  ? "bg-blue-700 text-white"
-                  : "text-blue-200 hover:bg-blue-800 hover:text-white"
+                  ? "bg-[#57A9A9] text-white"
+                  : "text-white/70 hover:bg-[#57A9A9]/20 hover:text-white"
                 }`
               }
             >
@@ -57,10 +57,10 @@ export default function Layout({ children }) {
             </NavLink>
           ))}
         </nav>
-        <div className="p-4 border-t border-blue-800">
+        <div className="p-4 border-t border-[#57A9A9]/30">
           <button
             onClick={handleSignOut}
-            className="flex items-center gap-2 text-sm text-blue-300 hover:text-white transition-colors"
+            className="flex items-center gap-2 text-sm text-white/60 hover:text-white transition-colors"
           >
             <LogOut size={15} />
             Sign out
