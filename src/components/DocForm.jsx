@@ -20,6 +20,7 @@ export default function DocForm({
     date: today,
     validUntil: "",
     taxRate: 0,
+    paymentTerms: "",
     notes: "",
     to: { name: "", address: "", contact: "", email: "", attn: "" },
     items: [{ description: "", qty: 1, unit: "unit", unitPrice: 0, notes: "" }],
@@ -135,10 +136,17 @@ export default function DocForm({
 
       {/* Totals + Notes */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <label className="label">Notes / Remarks</label>
-          <textarea className="input" rows={4} placeholder="Any additional notes…"
-            value={form.notes} onChange={(e) => set("notes", e.target.value)} />
+        <div className="space-y-5">
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <label className="label">Payment Terms</label>
+            <input className="input" placeholder="e.g. Bayaran penuh / Selepas selesai kerja"
+              value={form.paymentTerms} onChange={(e) => set("paymentTerms", e.target.value)} />
+          </div>
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <label className="label">Notes / Remarks</label>
+            <textarea className="input" rows={3} placeholder="Any additional notes…"
+              value={form.notes} onChange={(e) => set("notes", e.target.value)} />
+          </div>
         </div>
         {showPrice && (
           <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">

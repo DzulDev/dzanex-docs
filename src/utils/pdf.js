@@ -147,9 +147,24 @@ function addItemsTable(doc, items, y, showPrice) {
   }
 }
 
-function addTerms(doc, y, depositAmt) {
+function addTerms(doc, y, depositAmt, paymentTerms) {
   const pageW   = doc.internal.pageSize.getWidth();
   const deposit = depositAmt ? `RM${depositAmt.toFixed(2)}` : "as agreed";
+
+  if (paymentTerms) {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(...BLACK);
+    doc.text("Payment Terms", M, y); y += 5;
+
+    doc.setFillColor(...LGRAY);
+    doc.roundedRect(M, y - 1, pageW - M * 2, 8, 1.5, 1.5, "F");
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.5);
+    doc.setTextColor(...BLACK);
+    doc.text(paymentTerms, M + 3, y + 4.5);
+    y += 13;
+  }
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9);
@@ -209,7 +224,7 @@ export function generateQuotation(docData, logoDataUrl) {
   let y = addHeader(doc, "Quotation", docData.docNo, docData.date, logoDataUrl);
   y = addBillTo(doc, docData.to, docData.date, y);
   const { finalY, total } = addItemsTable(doc, docData.items, y, true);
-  y = addTerms(doc, finalY + 10, total * 0.8);
+  y = addTerms(doc, finalY + 10, total * 0.8, docData.paymentTerms);
   addBankDetails(doc, y);
   addFooter(doc);
 
