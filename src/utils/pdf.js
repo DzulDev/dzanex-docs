@@ -3,7 +3,9 @@ import autoTable from "jspdf-autotable";
 import { COMPANY } from "./company";
 import { format } from "date-fns";
 
-const ORANGE = [232, 119, 34];
+const TEAL   = [87, 169, 169];   // Dzanex logo teal
+const CORAL  = [232, 145, 122];  // Dzanex logo coral
+const ORANGE = TEAL;             // table headers use teal
 const BLACK  = [17,  24,  39];
 const DARK   = [55,  65,  81];
 const GRAY   = [107, 114, 128];
@@ -63,8 +65,8 @@ function addHeader(doc, title, docNo, date, logoDataUrl, accentColor) {
 
   // Divider
   y += 4;
-  doc.setDrawColor(...MGRAY);
-  doc.setLineWidth(0.4);
+  doc.setDrawColor(...CORAL);
+  doc.setLineWidth(0.6);
   doc.line(M, y, pageW - M, y);
 
   return y + 7;
