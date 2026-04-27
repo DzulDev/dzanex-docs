@@ -96,41 +96,43 @@ export default function Dashboard() {
             No documents yet. Create your first one!
           </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
-              <tr>
-                <th className="px-5 py-3 text-left">Doc No</th>
-                <th className="px-5 py-3 text-left">Type</th>
-                <th className="px-5 py-3 text-left">Client / Supplier</th>
-                <th className="px-5 py-3 text-left">Date</th>
-                <th className="px-5 py-3 text-right">Total</th>
-                <th className="px-5 py-3 text-left">Link</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {recent.map((r, i) => (
-                <tr key={i} className="hover:bg-gray-50">
-                  <td className="px-5 py-3 font-mono text-blue-700">{r["Doc No"]}</td>
-                  <td className="px-5 py-3">
-                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                      {r._type}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3 text-gray-700">{r.Client || r.Supplier}</td>
-                  <td className="px-5 py-3 text-gray-500">{r.Date}</td>
-                  <td className="px-5 py-3 text-right font-medium text-gray-800">
-                    {r.Total ? `MYR ${Number(r.Total).toFixed(2)}` : "—"}
-                  </td>
-                  <td className="px-5 py-3">
-                    {r["Drive Link"] && (
-                      <a href={r["Drive Link"]} target="_blank" rel="noreferrer"
-                        className="text-blue-500 hover:underline text-xs">View PDF</a>
-                    )}
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
+                <tr>
+                  <th className="px-5 py-3 text-left whitespace-nowrap">Doc No</th>
+                  <th className="px-5 py-3 text-left whitespace-nowrap">Type</th>
+                  <th className="px-5 py-3 text-left whitespace-nowrap">Client / Supplier</th>
+                  <th className="px-5 py-3 text-left whitespace-nowrap">Date</th>
+                  <th className="px-5 py-3 text-right whitespace-nowrap">Total</th>
+                  <th className="px-5 py-3 text-left whitespace-nowrap">Link</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {recent.map((r, i) => (
+                  <tr key={i} className="hover:bg-gray-50">
+                    <td className="px-5 py-3 font-mono text-blue-700 whitespace-nowrap">{r["Doc No"]}</td>
+                    <td className="px-5 py-3 whitespace-nowrap">
+                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                        {r._type}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3 text-gray-700 whitespace-nowrap">{r.Client || r.Supplier}</td>
+                    <td className="px-5 py-3 text-gray-500 whitespace-nowrap">{r.Date}</td>
+                    <td className="px-5 py-3 text-right font-medium text-gray-800 whitespace-nowrap">
+                      {r.Total ? `MYR ${Number(r.Total).toFixed(2)}` : "—"}
+                    </td>
+                    <td className="px-5 py-3 whitespace-nowrap">
+                      {r["Drive Link"] && (
+                        <a href={r["Drive Link"]} target="_blank" rel="noreferrer"
+                          className="text-blue-500 hover:underline text-xs">View PDF</a>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>
