@@ -75,16 +75,16 @@ export default function DocPage({ type, title, prefix, sheetName, showPrice, sho
 
   return (
     <div>
-      <div className="flex gap-4 mb-6">
+      <div className="flex gap-1 mb-6 border-b border-gray-200">
         <button
           onClick={() => setView("form")}
-          className={`text-sm font-medium pb-1 border-b-2 transition-colors ${view === "form" ? "border-blue-600 text-blue-700" : "border-transparent text-gray-500 hover:text-gray-700"}`}
+          className={`text-sm font-medium px-4 py-2.5 border-b-2 -mb-px transition-colors whitespace-nowrap ${view === "form" ? "border-blue-600 text-blue-700" : "border-transparent text-gray-500 hover:text-gray-700"}`}
         >
           New {title}
         </button>
         <button
           onClick={() => setView("list")}
-          className={`text-sm font-medium pb-1 border-b-2 transition-colors ${view === "list" ? "border-blue-600 text-blue-700" : "border-transparent text-gray-500 hover:text-gray-700"}`}
+          className={`text-sm font-medium px-4 py-2.5 border-b-2 -mb-px transition-colors whitespace-nowrap ${view === "list" ? "border-blue-600 text-blue-700" : "border-transparent text-gray-500 hover:text-gray-700"}`}
         >
           All {title}s
         </button>
