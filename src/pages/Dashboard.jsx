@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { FileText, Receipt, ShoppingCart, Truck, TrendingUp, Plus } from "lucide-react";
 import { getConfig } from "../utils/storage";
 import { getRows, getToken } from "../utils/google";
-import { format } from "date-fns";
 
 const CARDS = [
   { type: "Quotation", label: "Quotations", icon: FileText, color: "teal", to: "/quotation" },
@@ -53,7 +52,7 @@ export default function Dashboard() {
           .sort((a, b) => new Date(b.Date) - new Date(a.Date))
           .slice(0, 8);
         setRecent(all);
-      } catch {}
+      } catch (e) { console.error(e); }
     }
     load();
   }, []);

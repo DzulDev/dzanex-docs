@@ -1,10 +1,10 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   FileText, Receipt, ShoppingCart, Truck,
-  LayoutDashboard, Settings, LogOut, Menu, X
+  LayoutDashboard, Settings, LogOut, Menu
 } from "lucide-react";
 import { useState } from "react";
-import { signOut, getToken } from "../utils/google";
+import { signOut } from "../utils/google";
 
 const NAV = [
   { to: "/", icon: LayoutDashboard, label: "Dashboard" },
