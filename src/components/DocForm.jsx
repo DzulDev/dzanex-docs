@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import { Loader2, Download, Save, Eye } from "lucide-react";
+import { Loader2, Save, Eye } from "lucide-react";
 import ItemsTable from "./ItemsTable";
 
 export default function DocForm({

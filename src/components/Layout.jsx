@@ -1,10 +1,10 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   FileText, Receipt, ShoppingCart, Truck,
-  LayoutDashboard, Settings, LogOut, Menu, X
+  LayoutDashboard, Settings, LogOut, Menu
 } from "lucide-react";
 import { useState } from "react";
-import { signOut, getToken } from "../utils/google";
+import { signOut } from "../utils/google";
 
 const NAV = [
   { to: "/", icon: LayoutDashboard, label: "Dashboard" },
@@ -33,9 +33,12 @@ export default function Layout({ children }) {
         ${open ? "translate-x-0" : "-translate-x-full"}
         lg:relative lg:translate-x-0
       `}>
-        <div className="px-5 py-5 border-b border-[#57A9A9]/30">
-          <p className="text-xs text-[#57A9A9] font-medium">DZANEX TECHNOLOGY</p>
-          <p className="text-xs text-[#57A9A9]/70 mt-0.5">TR0320764-P</p>
+        <div className="px-5 py-5 border-b border-[#57A9A9]/30 flex items-center gap-3">
+          <img src="/logo.png" alt="Dzanex" className="w-10 h-10 object-contain" />
+          <div>
+            <p className="text-xs text-[#57A9A9] font-medium">DZANEX TECHNOLOGY</p>
+            <p className="text-xs text-[#57A9A9]/70 mt-0.5">TR0320764-P</p>
+          </div>
         </div>
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {NAV.map(({ to, icon: Icon, label }) => (

@@ -22,6 +22,7 @@ export default function DocList({ sheetName, title }) {
     }
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { load(); }, [sheetName]);
 
   if (loading) return (

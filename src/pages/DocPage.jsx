@@ -4,9 +4,7 @@ import DocForm from "../components/DocForm";
 import DocList from "./DocList";
 import { getConfig } from "../utils/storage";
 import { getToken, getNextDocNumber, appendRow, ensureDriveFolder, uploadPDF } from "../utils/google";
-import { format } from "date-fns";
-
-export default function DocPage({ type, title, prefix, sheetName, showPrice, showTax, showValidUntil, partyLabel, generateFn }) {
+export default function DocPage({ title, prefix, sheetName, showPrice, showTax, showValidUntil, partyLabel, generateFn }) {
   const [docNo, setDocNo] = useState("");
   const [saving, setSaving] = useState(false);
   const [view, setView] = useState("form"); // form | list
