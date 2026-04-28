@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Deployment
+
+Live URL: **https://dzanex-docs.pages.dev/** (Cloudflare Pages — auto-deploys from `main` branch)
+
 ## Commands
 
 ```bash
