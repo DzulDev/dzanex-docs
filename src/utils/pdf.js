@@ -93,16 +93,27 @@ function addBillTo(doc, toData, date, y) {
 function addItemsTable(doc, items, y, showPrice) {
   if (showPrice) {
     const taxRate  = doc.__taxRate || 0;
-    const subtotal = items.reduce((s, i) => s + (Number(i.qty) || 0) * (Number(i.unitPrice) || 0), 0);
+    const subtotal = items.reduce((s, i) => s + (parseFloat(i.qty) || 0) * (parseFloat(i.unitPrice) || 0), 0);
     const total    = subtotal + subtotal * taxRate / 100;
 
-    const rows = items.map((item, i) => [
-      i + 1,
-      item.description,
-      item.qty,
-      `RM${Number(item.unitPrice || 0).toFixed(2)}`,
-      `RM${(Number(item.qty || 0) * Number(item.unitPrice || 0)).toFixed(2)}`,
-    ]);
+    const rows = items.map((item, i) => {
+      const qtyDisplay = item.unit === "l/s" ? "l/s" : `${item.qty} ${item.unit || ""}`.trim();
+      const desc = item.notes && item.notes.trim()
+        ? item.description + "\n" + item.notes.split("\n")
+            .filter(l => l.trim())
+            .map(l => `  • ${l.trim()}`)
+            .join("\n")
+        : item.description;
+      const qty   = parseFloat(item.qty)      || 0;
+      const price = parseFloat(item.unitPrice) || 0;
+      return [
+        i + 1,
+        desc,
+        qtyDisplay,
+        `RM ${price.toFixed(2)}`,
+        `RM ${(qty * price).toFixed(2)}`,
+      ];
+    });
 
     autoTable(doc, {
       startY: y,

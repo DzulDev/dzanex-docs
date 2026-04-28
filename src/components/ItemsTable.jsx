@@ -42,6 +42,15 @@ export default function ItemsTable({ items, onChange, showPrice = true }) {
                     onChange={(e) => update(i, "description", e.target.value)}
                     placeholder="Item description"
                   />
+                  {showPrice && (
+                    <textarea
+                      rows={2}
+                      className="w-full border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-400 rounded px-1 text-xs text-gray-400 resize-none mt-1 leading-tight"
+                      value={item.notes || ""}
+                      onChange={(e) => update(i, "notes", e.target.value)}
+                      placeholder="• Details (one per line)…"
+                    />
+                  )}
                 </td>
                 <td className="px-3 py-2">
                   <input
