@@ -8,6 +8,8 @@ import { Loader2 } from "lucide-react";
 export default function Login() {
   const DEFAULT_CLIENT_ID = "951409197659-jltf9l48kd0hveptnbd1vuduqghek8op.apps.googleusercontent.com";
   const [clientId, setClientId] = useState(getConfig().clientId || DEFAULT_CLIENT_ID);
+  const [existingSheetId, setExistingSheetId] = useState("");
+  const [showReconnect, setShowReconnect] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
@@ -20,6 +22,12 @@ export default function Login() {
     try {
       const token = await signIn(clientId.trim());
       let { sheetId, driveFolderId } = getConfig();
+
+      // Allow reconnecting to existing sheet on a new device
+      if (!sheetId && existingSheetId.trim()) {
+        sheetId = existingSheetId.trim();
+        saveConfig({ sheetId });
+      }
 
       if (!sheetId) {
         sheetId = await createSpreadsheet(token);
@@ -68,6 +76,28 @@ export default function Login() {
             <p className="text-xs text-gray-400 mt-1">
               Paste your Client ID from Google Cloud Console → APIs & Services → Credentials
             </p>
+          </div>
+
+          {/* Reconnect on new device */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowReconnect(v => !v)}
+              className="text-xs text-blue-600 hover:underline"
+            >
+              {showReconnect ? "▾" : "▸"} Using a new device? Reconnect to existing data
+            </button>
+            {showReconnect && (
+              <div className="mt-2">
+                <label className="label">Existing Sheet ID <span className="text-gray-400 font-normal">(from Settings on your other device)</span></label>
+                <input
+                  className="input font-mono text-xs"
+                  placeholder="Paste your Google Sheets ID here"
+                  value={existingSheetId}
+                  onChange={(e) => setExistingSheetId(e.target.value)}
+                />
+              </div>
+            )}
           </div>
 
           {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}

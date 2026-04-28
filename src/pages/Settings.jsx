@@ -1,12 +1,20 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Upload, Trash2, LogOut } from "lucide-react";
+import { Upload, Trash2, LogOut, Copy, Check } from "lucide-react";
 import { getConfig, saveConfig } from "../utils/storage";
 import { signOut } from "../utils/google";
 
 export default function Settings() {
   const navigate = useNavigate();
   const [config, setConfig] = useState(getConfig());
+  const [copied, setCopied] = useState(false);
+
+  function copySheetId() {
+    if (!config.sheetId) return;
+    navigator.clipboard.writeText(config.sheetId);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
 
   function handleLogo(e) {
     const file = e.target.files[0];
@@ -58,15 +66,31 @@ export default function Settings() {
 
       {/* Connected resources */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
-        <h2 className="font-semibold text-gray-700">Connected Resources</h2>
-        <div className="space-y-2 text-sm">
-          <div className="flex items-start gap-2">
-            <span className="text-gray-500 shrink-0">Google Sheets ID:</span>
-            <span className="font-mono text-xs text-blue-700 break-all">{config.sheetId || "—"}</span>
+        <div>
+          <h2 className="font-semibold text-gray-700">Connected Resources</h2>
+          <p className="text-xs text-gray-400 mt-0.5">Save your Sheet ID to reconnect on a new device.</p>
+        </div>
+        <div className="space-y-3 text-sm">
+          <div className="space-y-1">
+            <span className="text-xs font-medium text-gray-500">Google Sheets ID</span>
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-xs text-blue-700 break-all flex-1 bg-gray-50 border border-gray-200 rounded px-2 py-1.5">
+                {config.sheetId || "—"}
+              </span>
+              {config.sheetId && (
+                <button onClick={copySheetId}
+                  className="shrink-0 flex items-center gap-1 text-xs text-gray-500 hover:text-blue-600 border border-gray-200 rounded px-2 py-1.5 transition-colors">
+                  {copied ? <Check size={12} className="text-green-500" /> : <Copy size={12} />}
+                  {copied ? "Copied" : "Copy"}
+                </button>
+              )}
+            </div>
           </div>
-          <div className="flex items-start gap-2">
-            <span className="text-gray-500 shrink-0">Drive Folder ID:</span>
-            <span className="font-mono text-xs text-blue-700 break-all">{config.driveFolderId || "—"}</span>
+          <div className="space-y-1">
+            <span className="text-xs font-medium text-gray-500">Drive Folder ID</span>
+            <span className="font-mono text-xs text-blue-700 break-all block bg-gray-50 border border-gray-200 rounded px-2 py-1.5">
+              {config.driveFolderId || "—"}
+            </span>
           </div>
         </div>
       </div>
