@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Navy background -->
+  <rect width="512" height="512" rx="108" fill="#1B3A5C"/>
+
+  <!-- Document body -->
+  <path d="M144 88 H296 L368 160 V420 a20 20 0 0 1-20 20 H164 a20 20 0 0 1-20-20 V108 a20 20 0 0 1 20-20Z" fill="white"/>
+
+  <!-- Corner fold -->
+  <path d="M296 88 L368 160 H316 a20 20 0 0 1-20-20Z" fill="#57A9A9"/>
+
+  <!-- Coral fold accent dot -->
+  <circle cx="350" cy="142" r="10" fill="#E8917A"/>
+
+  <!-- Teal header line (document title) -->
+  <rect x="172" y="188" width="168" height="14" rx="7" fill="#57A9A9"/>
+
+  <!-- Content rows -->
+  <rect x="172" y="220" width="168" height="9" rx="4" fill="#CBD5E1"/>
+  <rect x="172" y="238" width="124" height="9" rx="4" fill="#CBD5E1"/>
+
+  <rect x="172" y="268" width="168" height="9" rx="4" fill="#CBD5E1"/>
+  <rect x="172" y="286" width="104" height="9" rx="4" fill="#CBD5E1"/>
+  <rect x="172" y="304" width="148" height="9" rx="4" fill="#CBD5E1"/>
+
+  <!-- Total bar -->
+  <rect x="172" y="340" width="168" height="26" rx="10" fill="#57A9A9" opacity="0.2"/>
+  <rect x="220" y="347" width="116" height="12" rx="6" fill="#57A9A9"/>
+</svg>
