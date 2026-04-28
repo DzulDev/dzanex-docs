@@ -3,8 +3,9 @@ import {
   FileText, Receipt, ShoppingCart, Truck,
   LayoutDashboard, Settings, LogOut, Menu
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { signOut } from "../utils/google";
+import { version } from "../../package.json";
 
 const NAV = [
   { to: "/", icon: LayoutDashboard, label: "Dashboard" },
@@ -15,9 +16,36 @@ const NAV = [
   { to: "/settings", icon: Settings, label: "Settings" },
 ];
 
+const UPDATE_CHECK_INTERVAL = 60_000; // check every 60s
+const AUTO_REFRESH_DELAY    = 20_000; // auto-refresh after 20s if not dismissed
+
 export default function Layout({ children }) {
   const [open, setOpen] = useState(false);
+  const [updateReady, setUpdateReady] = useState(false);
+  const autoRefreshTimer = useRef(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    let lastEtag = null;
+
+    async function checkForUpdate() {
+      try {
+        const res = await fetch("/", { method: "HEAD", cache: "no-store" });
+        const etag = res.headers.get("etag") || res.headers.get("last-modified");
+        if (lastEtag === null) { lastEtag = etag; return; }
+        if (etag && etag !== lastEtag) setUpdateReady(true);
+      } catch { /* offline — skip */ }
+    }
+
+    const interval = setInterval(checkForUpdate, UPDATE_CHECK_INTERVAL);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (!updateReady) return;
+    autoRefreshTimer.current = setTimeout(() => window.location.reload(), AUTO_REFRESH_DELAY);
+    return () => clearTimeout(autoRefreshTimer.current);
+  }, [updateReady]);
 
   function handleSignOut() {
     signOut();
@@ -87,9 +115,28 @@ export default function Layout({ children }) {
           </button>
           <span className="font-semibold text-gray-800">Dzanex Docs</span>
         </header>
+        {/* Update banner */}
+        {updateReady && (
+          <div className="shrink-0 bg-[#57A9A9] text-white text-xs px-4 py-2 flex items-center justify-between gap-3">
+            <span>🔄 New update available!</span>
+            <div className="flex items-center gap-2">
+              <span className="opacity-75">Auto-refresh in 20s…</span>
+              <button
+                onClick={() => { clearTimeout(autoRefreshTimer.current); window.location.reload(); }}
+                className="bg-white text-[#1B3A5C] font-semibold px-3 py-0.5 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                Refresh now
+              </button>
+            </div>
+          </div>
+        )}
         <main className="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
           {children}
         </main>
+        <footer className="shrink-0 border-t border-gray-100 bg-white px-4 py-2 flex items-center justify-between text-xs text-gray-400">
+          <span>© {new Date().getFullYear()} Dzanex Technology</span>
+          <span>v{version}</span>
+        </footer>
       </div>
     </div>
   );
