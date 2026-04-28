@@ -33,7 +33,7 @@ function addHeader(doc, title, docNo, date, logoDataUrl) {
   doc.setTextColor(...DARK);
   doc.text(`${title}#: ${docNo}`, pageW - M, 30, { align: "right" });
 
-  let y = 48;
+  let y = logoDataUrl ? 41 : 48;
   doc.setFontSize(7.5);
   doc.setTextColor(...GRAY);
   doc.text(COMPANY.regNo, M, y); y += 5;
@@ -96,14 +96,19 @@ function addItemsTable(doc, items, y, showPrice) {
     const subtotal = items.reduce((s, i) => s + (parseFloat(i.qty) || 0) * (parseFloat(i.unitPrice) || 0), 0);
     const total    = subtotal + subtotal * taxRate / 100;
 
+    // Track items that need bold-main + normal-bullets split rendering
+    const splitBold = {};
     const rows = items.map((item, i) => {
       const qtyDisplay = item.unit === "l/s" ? "l/s" : `${item.qty} ${item.unit || ""}`.trim();
-      const desc = item.notes && item.notes.trim()
-        ? item.description + "\n" + item.notes.split("\n")
-            .filter(l => l.trim())
-            .map(l => `  • ${l.trim()}`)
-            .join("\n")
+      const bullets = item.notes && item.notes.trim()
+        ? item.notes.split("\n").filter(l => l.trim()).map(l => `  • ${l.trim()}`)
+        : [];
+      const desc = bullets.length
+        ? item.description + "\n" + bullets.join("\n")
         : item.description;
+      if (item.isBold && bullets.length) {
+        splitBold[i] = { main: item.description, bullets };
+      }
       const qty   = parseFloat(item.qty)      || 0;
       const price = parseFloat(item.unitPrice) || 0;
       return [
@@ -136,6 +141,33 @@ function addItemsTable(doc, items, y, showPrice) {
         4: { cellWidth: 30, halign: "right"  },
       },
       margin: { left: M, right: M },
+      didDrawCell: (data) => {
+        if (data.section !== "body" || data.column.index !== 1) return;
+        const split = splitBold[data.row.index];
+        if (!split) return;
+        const cp = 3;
+        const isAlt = data.row.index % 2 !== 0;
+        // Erase the all-bold auto-render, preserve borders
+        doc.setFillColor(...(isAlt ? [250, 250, 250] : [255, 255, 255]));
+        doc.rect(data.cell.x + 0.5, data.cell.y + 0.5, data.cell.width - 1, data.cell.height - 1, "F");
+        const textX = data.cell.x + cp;
+        const maxW  = data.cell.width - cp * 2;
+        let   textY = data.cell.y + cp + 3;
+        doc.setFontSize(9);
+        doc.setTextColor(...BLACK);
+        // Bold — main description only
+        doc.setFont("helvetica", "bold");
+        const mainLines = doc.splitTextToSize(split.main, maxW);
+        doc.text(mainLines, textX, textY);
+        textY += mainLines.length * 4.5;
+        // Normal — bullet sub-descriptions
+        doc.setFont("helvetica", "normal");
+        split.bullets.forEach(line => {
+          const wrapped = doc.splitTextToSize(line, maxW);
+          doc.text(wrapped, textX, textY);
+          textY += wrapped.length * 4.5;
+        });
+      },
     });
 
     return { finalY: doc.lastAutoTable.finalY, total };

@@ -146,9 +146,9 @@ export default function DocForm({
       {showValidUntil && (
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <h2 className="font-semibold text-gray-700 mb-4">Terms &amp; Conditions</h2>
-          <div className="space-y-3">
+          <div className="space-y-2">
             {form.terms.map((term, i) => (
-              <div key={i} className="flex items-start gap-3">
+              <div key={i} className="flex items-center gap-2">
                 <input
                   type="checkbox"
                   checked={term.enabled}
@@ -156,11 +156,11 @@ export default function DocForm({
                     const terms = form.terms.map((t, idx) => idx === i ? { ...t, enabled: e.target.checked } : t);
                     set("terms", terms);
                   }}
-                  className="mt-2.5 w-4 h-4 rounded accent-blue-600 shrink-0 cursor-pointer"
+                  className="w-3.5 h-3.5 rounded accent-blue-600 shrink-0 cursor-pointer"
                 />
-                <textarea
-                  rows={2}
-                  className={`input text-sm flex-1 resize-none transition-opacity ${!term.enabled ? "opacity-40" : ""}`}
+                <input
+                  type="text"
+                  className={`input text-xs py-1.5 flex-1 transition-opacity ${!term.enabled ? "opacity-40" : ""}`}
                   value={term.text}
                   disabled={!term.enabled}
                   onChange={(e) => {
