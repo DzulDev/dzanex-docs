@@ -2,7 +2,7 @@ import { Plus, Trash2 } from "lucide-react";
 
 export default function ItemsTable({ items, onChange, showPrice = true }) {
   function add() {
-    onChange([...items, { description: "", qty: 1, unit: "unit", unitPrice: 0, notes: "" }]);
+    onChange([...items, { description: "", qty: 1, unit: "unit", unitPrice: 0, notes: "", isBold: false }]);
   }
 
   function remove(i) {
@@ -97,12 +97,24 @@ export default function ItemsTable({ items, onChange, showPrice = true }) {
                   </td>
                 )}
                 <td className="px-3 py-2">
-                  <button
-                    onClick={() => remove(i)}
-                    className="text-red-400 hover:text-red-600 transition-colors"
-                  >
-                    <Trash2 size={15} />
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    {showPrice && (
+                      <button
+                        type="button"
+                        title="Toggle bold"
+                        onClick={() => update(i, "isBold", !item.isBold)}
+                        className={`w-5 h-5 text-xs font-black rounded flex items-center justify-center transition-colors ${item.isBold ? "bg-gray-700 text-white" : "bg-gray-100 text-gray-400 hover:bg-gray-200"}`}
+                      >
+                        B
+                      </button>
+                    )}
+                    <button
+                      onClick={() => remove(i)}
+                      className="text-red-400 hover:text-red-600 transition-colors"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

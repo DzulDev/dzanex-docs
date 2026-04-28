@@ -108,7 +108,7 @@ function addItemsTable(doc, items, y, showPrice) {
       const price = parseFloat(item.unitPrice) || 0;
       return [
         i + 1,
-        desc,
+        { content: desc, styles: { fontStyle: item.isBold ? "bold" : "normal" } },
         qtyDisplay,
         `RM ${price.toFixed(2)}`,
         `RM ${(qty * price).toFixed(2)}`,
@@ -121,8 +121,10 @@ function addItemsTable(doc, items, y, showPrice) {
       body: rows,
       foot: [[
         { content: "Total Amount", colSpan: 4, styles: { halign: "right", fontStyle: "bold", fillColor: [...LGRAY], textColor: [...BLACK] } },
-        { content: `RM${total.toFixed(2)}`, styles: { fontStyle: "bold", fillColor: [...LGRAY], textColor: [...BLACK] } },
+        { content: `RM ${total.toFixed(2)}`, styles: { fontStyle: "bold", fillColor: [...LGRAY], textColor: [...BLACK] } },
       ]],
+      showFoot:           "everyPage",
+      rowPageBreak:       "avoid",
       styles:             { fontSize: 9, cellPadding: 3 },
       headStyles:         { fillColor: TEAL, textColor: 255, fontStyle: "bold" },
       footStyles:         { textColor: [...BLACK] },
@@ -158,9 +160,8 @@ function addItemsTable(doc, items, y, showPrice) {
   }
 }
 
-function addTerms(doc, y, depositAmt, paymentTerms) {
+function addTerms(doc, y, depositAmt, paymentTerms, customTerms) {
   const pageW   = doc.internal.pageSize.getWidth();
-  const deposit = depositAmt ? `RM${depositAmt.toFixed(2)}` : "as agreed";
 
   if (paymentTerms) {
     doc.setFont("helvetica", "bold");
@@ -177,6 +178,12 @@ function addTerms(doc, y, depositAmt, paymentTerms) {
     y += 13;
   }
 
+  const enabledTerms = Array.isArray(customTerms)
+    ? customTerms.filter(t => t.enabled && t.text.trim())
+    : null;
+
+  if (!enabledTerms || enabledTerms.length === 0) return y;
+
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9);
   doc.setTextColor(...BLACK);
@@ -186,15 +193,8 @@ function addTerms(doc, y, depositAmt, paymentTerms) {
   doc.setFontSize(7);
   doc.setTextColor(...DARK);
 
-  const terms = [
-    `1) A deposit must be paid to proceed with purchasing items and project execution. Deposit amount: ${deposit}.`,
-    `2) The balance payment is required to proceed with the delivery of the order.`,
-    `3) Goods sold are neither returnable nor refundable.`,
-    `4) Any discrepancies must be reported to us within 7 days. Otherwise, goods sold are deemed accepted and confirmed by the customer.`,
-  ];
-
-  terms.forEach(t => {
-    const lines = doc.splitTextToSize(t, pageW - M * 2);
+  enabledTerms.forEach((t, i) => {
+    const lines = doc.splitTextToSize(`${i + 1}) ${t.text}`, pageW - M * 2);
     doc.text(lines, M, y);
     y += lines.length * 4 + 1.5;
   });
@@ -235,7 +235,7 @@ export function generateQuotation(docData, logoDataUrl) {
   let y = addHeader(doc, "Quotation", docData.docNo, docData.date, logoDataUrl);
   y = addBillTo(doc, docData.to, docData.date, y);
   const { finalY, total } = addItemsTable(doc, docData.items, y, true);
-  y = addTerms(doc, finalY + 10, total * 0.8, docData.paymentTerms);
+  y = addTerms(doc, finalY + 10, total * 0.8, docData.paymentTerms, docData.terms);
   addBankDetails(doc, y);
   addFooter(doc);
 

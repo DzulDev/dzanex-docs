@@ -3,6 +3,13 @@ import { format } from "date-fns";
 import { Loader2, Save, Eye } from "lucide-react";
 import ItemsTable from "./ItemsTable";
 
+const DEFAULT_TERMS = [
+  { enabled: true, text: "A deposit must be paid to proceed with purchasing items and project execution." },
+  { enabled: true, text: "The balance payment is required to proceed with the delivery of the order." },
+  { enabled: true, text: "Goods sold are neither returnable nor refundable." },
+  { enabled: true, text: "Any discrepancies must be reported to us within 7 days. Otherwise, goods sold are deemed accepted and confirmed by the customer." },
+];
+
 export default function DocForm({
   title,
   docNo,
@@ -22,8 +29,9 @@ export default function DocForm({
     taxRate: 0,
     paymentTerms: "",
     notes: "",
+    terms: DEFAULT_TERMS.map(t => ({ ...t })),
     to: { name: "", address: "", contact: "", email: "", attn: "" },
-    items: [{ description: "", qty: 1, unit: "unit", unitPrice: 0, notes: "" }],
+    items: [{ description: "", qty: 1, unit: "unit", unitPrice: 0, notes: "", isBold: false }],
   });
 
   function set(field, value) {
@@ -133,6 +141,38 @@ export default function DocForm({
         <h2 className="font-semibold text-gray-700 mb-4">Items / Services</h2>
         <ItemsTable items={form.items} onChange={(items) => set("items", items)} showPrice={showPrice} />
       </div>
+
+      {/* Terms & Conditions (Quotation only) */}
+      {showValidUntil && (
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <h2 className="font-semibold text-gray-700 mb-4">Terms &amp; Conditions</h2>
+          <div className="space-y-3">
+            {form.terms.map((term, i) => (
+              <div key={i} className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={term.enabled}
+                  onChange={(e) => {
+                    const terms = form.terms.map((t, idx) => idx === i ? { ...t, enabled: e.target.checked } : t);
+                    set("terms", terms);
+                  }}
+                  className="mt-2.5 w-4 h-4 rounded accent-blue-600 shrink-0 cursor-pointer"
+                />
+                <textarea
+                  rows={2}
+                  className={`input text-sm flex-1 resize-none transition-opacity ${!term.enabled ? "opacity-40" : ""}`}
+                  value={term.text}
+                  disabled={!term.enabled}
+                  onChange={(e) => {
+                    const terms = form.terms.map((t, idx) => idx === i ? { ...t, text: e.target.value } : t);
+                    set("terms", terms);
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Totals + Notes */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
