@@ -26,17 +26,18 @@ export default function Layout({ children }) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    let lastEtag = null;
+    let currentBuildTime = null;
 
     async function checkForUpdate() {
       try {
-        const res = await fetch("/", { method: "HEAD", cache: "no-store" });
-        const etag = res.headers.get("etag") || res.headers.get("last-modified");
-        if (lastEtag === null) { lastEtag = etag; return; }
-        if (etag && etag !== lastEtag) setUpdateReady(true);
+        const res  = await fetch(`/version.json?t=${Date.now()}`, { cache: "no-store" });
+        const data = await res.json();
+        if (currentBuildTime === null) { currentBuildTime = data.buildTime; return; }
+        if (data.buildTime !== currentBuildTime) setUpdateReady(true);
       } catch { /* offline — skip */ }
     }
 
+    checkForUpdate(); // baseline on mount
     const interval = setInterval(checkForUpdate, UPDATE_CHECK_INTERVAL);
     return () => clearInterval(interval);
   }, []);
