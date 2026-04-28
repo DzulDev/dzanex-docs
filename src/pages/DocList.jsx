@@ -1,11 +1,38 @@
 import { useEffect, useState } from "react";
 import { getConfig } from "../utils/storage";
-import { getRows, getToken } from "../utils/google";
+import { getRows, updateCell, getToken } from "../utils/google";
 import { ExternalLink, RefreshCw } from "lucide-react";
+
+const STATUS_OPTIONS = {
+  Quotation: ["Pending", "Accepted", "Rejected"],
+  Invoice:   ["Pending", "Paid", "Overdue"],
+  PO:        ["Pending", "Received", "Cancelled"],
+  DO:        ["Pending", "Delivered", "Cancelled"],
+};
+
+// Column letter of "Status" for each sheet
+const STATUS_COL = {
+  Quotation: "H",
+  Invoice:   "H",
+  PO:        "H",
+  DO:        "F",
+};
+
+const STATUS_STYLE = {
+  Pending:   "bg-yellow-100 text-yellow-700",
+  Accepted:  "bg-green-100 text-green-700",
+  Paid:      "bg-green-100 text-green-700",
+  Received:  "bg-blue-100 text-blue-700",
+  Delivered: "bg-blue-100 text-blue-700",
+  Rejected:  "bg-red-100 text-red-600",
+  Overdue:   "bg-orange-100 text-orange-600",
+  Cancelled: "bg-gray-100 text-gray-500",
+};
 
 export default function DocList({ sheetName, title }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState(null); // rowNum being updated
 
   async function load() {
     setLoading(true);
@@ -25,11 +52,29 @@ export default function DocList({ sheetName, title }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { load(); }, [sheetName]);
 
+  async function handleStatusChange(row, newStatus) {
+    const { sheetId } = getConfig();
+    const token = getToken();
+    const col = STATUS_COL[sheetName];
+    if (!col || !sheetId || !token) return;
+    setUpdating(row._rowNum);
+    try {
+      await updateCell(sheetId, sheetName, row._rowNum, col, newStatus, token);
+      setRows(prev => prev.map(r => r._rowNum === row._rowNum ? { ...r, Status: newStatus } : r));
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setUpdating(null);
+    }
+  }
+
   if (loading) return (
     <div className="flex items-center justify-center h-40 text-gray-400 text-sm">Loading…</div>
   );
 
-  const headers = rows[0] ? Object.keys(rows[0]).filter((h) => h !== "Drive Link") : [];
+  const headers = rows[0]
+    ? Object.keys(rows[0]).filter(h => h !== "Drive Link" && !h.startsWith("_"))
+    : [];
 
   return (
     <div>
@@ -51,7 +96,7 @@ export default function DocList({ sheetName, title }) {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
                 <tr>
-                  {headers.map((h) => (
+                  {headers.map(h => (
                     <th key={h} className="px-4 py-3 text-left whitespace-nowrap">{h}</th>
                   ))}
                   <th className="px-4 py-3 text-left">PDF</th>
@@ -60,13 +105,24 @@ export default function DocList({ sheetName, title }) {
               <tbody className="divide-y divide-gray-100">
                 {rows.map((row, i) => (
                   <tr key={i} className="hover:bg-gray-50">
-                    {headers.map((h) => (
+                    {headers.map(h => (
                       <td key={h} className="px-4 py-3 text-gray-700 whitespace-nowrap">
-                        {h === "Doc No"
-                          ? <span className="font-mono text-blue-700">{row[h]}</span>
-                          : h === "Status"
-                          ? <span className="px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700">{row[h]}</span>
-                          : row[h]}
+                        {h === "Doc No" ? (
+                          <span className="font-mono text-blue-700">{row[h]}</span>
+                        ) : h === "Status" ? (
+                          <select
+                            value={row[h] || "Pending"}
+                            disabled={updating === row._rowNum}
+                            onChange={e => handleStatusChange(row, e.target.value)}
+                            className={`text-xs font-medium px-2 py-0.5 rounded-full border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-400 transition-opacity ${STATUS_STYLE[row[h]] || "bg-gray-100 text-gray-500"} ${updating === row._rowNum ? "opacity-50" : ""}`}
+                          >
+                            {(STATUS_OPTIONS[sheetName] || ["Pending"]).map(s => (
+                              <option key={s} value={s}>{s}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          row[h]
+                        )}
                       </td>
                     ))}
                     <td className="px-4 py-3">

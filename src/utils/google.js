@@ -128,8 +128,22 @@ export async function getRows(sheetId, sheetName, token) {
   const data = await res.json();
   const [headers, ...rows] = data.values || [[]];
   if (!headers) return [];
-  return rows.map((r) =>
-    Object.fromEntries(headers.map((h, i) => [h, r[i] ?? ""]))
+  return rows.map((r, i) => ({
+    ...Object.fromEntries(headers.map((h, j) => [h, r[j] ?? ""])),
+    _rowNum: i + 2, // sheet row number (1 = headers, data starts at 2)
+  }));
+}
+
+export async function updateCell(sheetId, sheetName, rowNum, col, value, token) {
+  const t = token || getToken();
+  const range = `${sheetName}!${col}${rowNum}`;
+  await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`,
+    {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${t}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ values: [[value]] }),
+    }
   );
 }
 
