@@ -27,6 +27,7 @@ export default function DocForm({
     date: today,
     validUntil: "",
     taxRate: 0,
+    subject: "",
     paymentTerms: "",
     notes: "",
     terms: DEFAULT_TERMS.map(t => ({ ...t })),
@@ -134,6 +135,13 @@ export default function DocForm({
               value={form.to.email} onChange={(e) => setTo("email", e.target.value)} />
           </div>
         </div>
+      </div>
+
+      {/* Subject / Title */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <label className="label">Title / Subject <span className="text-gray-400 font-normal">(shown as heading above items table in PDF)</span></label>
+        <input className="input" placeholder="e.g. SEBUTHARGA PENYEDIAAN TEKNIKAL DAN PENTADBIRAN PERTANDINGAN ROBOTIK"
+          value={form.subject} onChange={(e) => set("subject", e.target.value)} />
       </div>
 
       {/* Items */}

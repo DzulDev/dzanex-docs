@@ -90,6 +90,21 @@ function addBillTo(doc, toData, date, y) {
   return y + 6;
 }
 
+function addSectionTitle(doc, subject, y) {
+  if (!subject || !subject.trim()) return y;
+  const pageW = doc.internal.pageSize.getWidth();
+  const text  = subject.trim().toUpperCase();
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9.5);
+  doc.setTextColor(...BLACK);
+  doc.text(text, pageW / 2, y, { align: "center" });
+  const w = doc.getTextWidth(text);
+  doc.setDrawColor(...DARK);
+  doc.setLineWidth(0.3);
+  doc.line(pageW / 2 - w / 2, y + 1, pageW / 2 + w / 2, y + 1);
+  return y + 8;
+}
+
 function addItemsTable(doc, items, y, showPrice) {
   if (showPrice) {
     const taxRate  = doc.__taxRate || 0;
@@ -266,6 +281,7 @@ export function generateQuotation(docData, logoDataUrl) {
 
   let y = addHeader(doc, "Quotation", docData.docNo, docData.date, logoDataUrl);
   y = addBillTo(doc, docData.to, docData.date, y);
+  y = addSectionTitle(doc, docData.subject, y);
   const { finalY, total } = addItemsTable(doc, docData.items, y, true);
   y = addTerms(doc, finalY + 10, total * 0.8, docData.paymentTerms, docData.terms);
   addBankDetails(doc, y);
@@ -280,6 +296,7 @@ export function generateInvoice(docData, logoDataUrl) {
 
   let y = addHeader(doc, "Invoice", docData.docNo, docData.date, logoDataUrl);
   y = addBillTo(doc, docData.to, docData.date, y);
+  y = addSectionTitle(doc, docData.subject, y);
   const { finalY } = addItemsTable(doc, docData.items, y, true);
   y = finalY + 10;
 
@@ -307,6 +324,7 @@ export function generatePO(docData, logoDataUrl) {
 
   let y = addHeader(doc, "Purchase Order", docData.docNo, docData.date, logoDataUrl);
   y = addBillTo(doc, docData.to, docData.date, y);
+  y = addSectionTitle(doc, docData.subject, y);
   const { finalY } = addItemsTable(doc, docData.items, y, true);
 
   const pageW = doc.internal.pageSize.getWidth();
@@ -328,6 +346,7 @@ export function generateDO(docData, logoDataUrl) {
 
   let y = addHeader(doc, "Delivery Order", docData.docNo, docData.date, logoDataUrl);
   y = addBillTo(doc, docData.to, docData.date, y);
+  y = addSectionTitle(doc, docData.subject, y);
   const { finalY } = addItemsTable(doc, docData.items, y, false);
 
   const pageW = doc.internal.pageSize.getWidth();
