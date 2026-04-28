@@ -134,7 +134,7 @@ export default function Layout({ children }) {
           {children}
         </main>
         <footer className="shrink-0 border-t border-gray-100 bg-white px-4 py-2 flex items-center justify-between text-xs text-gray-400">
-          <span>© {new Date().getFullYear()} Dzanex Technology</span>
+          <span>© 2025 Dzanex Technology</span>
           <span>v{version}</span>
         </footer>
       </div>
