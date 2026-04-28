@@ -140,7 +140,7 @@ export default function DocForm({
       {/* Subject / Title */}
       <div className="bg-white rounded-xl border border-gray-200 p-5">
         <label className="label">Title / Subject <span className="text-gray-400 font-normal">(shown as heading above items table in PDF)</span></label>
-        <input className="input" placeholder="e.g. SEBUTHARGA PENYEDIAAN TEKNIKAL DAN PENTADBIRAN PERTANDINGAN ROBOTIK"
+        <input className="input" placeholder="Document title"
           value={form.subject} onChange={(e) => set("subject", e.target.value)} />
       </div>
 
@@ -187,7 +187,7 @@ export default function DocForm({
         <div className="space-y-5">
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <label className="label">Payment Terms</label>
-            <input className="input" placeholder="e.g. Bayaran penuh / Selepas selesai kerja"
+            <input className="input" placeholder="Payment terms"
               value={form.paymentTerms} onChange={(e) => set("paymentTerms", e.target.value)} />
           </div>
           <div className="bg-white rounded-xl border border-gray-200 p-5">
