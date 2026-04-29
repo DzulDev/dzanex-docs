@@ -79,10 +79,10 @@ export async function createSpreadsheet(token) {
 }
 
 const HEADERS = {
-  Quotation: ["Doc No", "Date", "Client", "Items", "Subtotal", "Tax", "Total", "Status", "Drive Link", "Notes"],
-  Invoice: ["Doc No", "Date", "Client", "Items", "Subtotal", "Tax", "Total", "Status", "Drive Link", "Notes"],
-  PO: ["Doc No", "Date", "Supplier", "Items", "Subtotal", "Tax", "Total", "Status", "Drive Link", "Notes"],
-  DO: ["Doc No", "Date", "Client", "Items", "Total Qty", "Status", "Drive Link", "Notes"],
+  Quotation: ["Doc No", "Date", "Client", "Items", "Subtotal", "Tax", "Total", "Status", "Drive Link", "Notes", "_raw"],
+  Invoice:   ["Doc No", "Date", "Client", "Items", "Subtotal", "Tax", "Total", "Status", "Drive Link", "Notes", "_raw"],
+  PO:        ["Doc No", "Date", "Supplier", "Items", "Subtotal", "Tax", "Total", "Status", "Drive Link", "Notes", "_raw"],
+  DO:        ["Doc No", "Date", "Client", "Items", "Total Qty", "Status", "Drive Link", "Notes", "_raw"],
 };
 
 export async function initSheetHeaders(sheetId, token) {
@@ -132,6 +132,31 @@ export async function getRows(sheetId, sheetName, token) {
     ...Object.fromEntries(headers.map((h, j) => [h, r[j] ?? ""])),
     _rowNum: i + 2, // sheet row number (1 = headers, data starts at 2)
   }));
+}
+
+// Adds "_raw" header column to existing sheets that don't have it yet
+export async function ensureRawColumn(sheetId, token) {
+  const t = token || getToken();
+  for (const sheetName of Object.keys(HEADERS)) {
+    try {
+      const res = await fetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${sheetName}!1:1`,
+        { headers: { Authorization: `Bearer ${t}` } }
+      );
+      const data = await res.json();
+      const existing = data.values?.[0] || [];
+      if (existing.includes("_raw")) continue;
+      const col = String.fromCharCode(64 + existing.length + 1);
+      await fetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${sheetName}!${col}1?valueInputOption=RAW`,
+        {
+          method: "PUT",
+          headers: { Authorization: `Bearer ${t}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ values: [["_raw"]] }),
+        }
+      );
+    } catch { /* skip */ }
+  }
 }
 
 export async function updateCell(sheetId, sheetName, rowNum, col, value, token) {

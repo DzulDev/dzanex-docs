@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import DocForm from "../components/DocForm";
 import DocList from "./DocList";
 import { getConfig } from "../utils/storage";
-import { getToken, getNextDocNumber, appendRow, ensureDriveFolder, uploadPDF } from "../utils/google";
+import { getToken, getNextDocNumber, appendRow, ensureDriveFolder, uploadPDF, ensureRawColumn } from "../utils/google";
 
 export default function DocPage({ title, prefix, sheetName, showPrice, showTax, showValidUntil, partyLabel, generateFn }) {
   const [docNo, setDocNo] = useState("");
@@ -20,6 +20,7 @@ export default function DocPage({ title, prefix, sheetName, showPrice, showTax, 
       const token = getToken();
       if (logoDataUrl) setLogoUrl(logoDataUrl);
       if (!sheetId || !token) { navigate("/login"); return; }
+      ensureRawColumn(sheetId, token); // fire-and-forget — adds _raw header to existing sheets
       const no = await getNextDocNumber(sheetId, sheetName, prefix, token);
       setDocNo(no);
     }
@@ -53,20 +54,20 @@ export default function DocPage({ title, prefix, sheetName, showPrice, showTax, 
       const total = subtotal + tax;
       const itemsSummary = formData.items.map((i) => i.description).join(", ");
 
+      // eslint-disable-next-line no-unused-vars
+      const { _action, ...saveData } = formData;
+      const rawJson = JSON.stringify(saveData);
+
       const row = sheetName === "DO"
         ? [formData.docNo, formData.date, formData.to.name, itemsSummary,
            formData.items.reduce((s, i) => s + Number(i.qty || 0), 0),
-           "Pending", driveLink, formData.notes]
+           "Pending", driveLink, formData.notes, rawJson]
         : [formData.docNo, formData.date, formData.to.name, itemsSummary,
            subtotal.toFixed(2), tax.toFixed(2), total.toFixed(2),
-           "Pending", driveLink, formData.notes];
+           "Pending", driveLink, formData.notes, rawJson];
 
       await appendRow(sheetId, sheetName, row, token);
-
-      // Save full form data for Convert feature
-      // eslint-disable-next-line no-unused-vars
-      const { _action, ...saveData } = formData;
-      localStorage.setItem(`dzanex_doc_${formData.docNo}`, JSON.stringify(saveData));
+      localStorage.setItem(`dzanex_doc_${formData.docNo}`, rawJson); // local cache too
 
       alert(`${title} saved!\n${formData.docNo}\nDrive link: ${driveLink}`);
       navigate("/");

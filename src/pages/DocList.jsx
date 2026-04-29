@@ -29,8 +29,13 @@ const CONVERT_OPTIONS = {
   ],
 };
 
-function getStoredDoc(docNo) {
-  try { return JSON.parse(localStorage.getItem(`dzanex_doc_${docNo}`) || "null"); }
+function getPrefill(row) {
+  // Primary: _raw column from Google Sheets (works on any device)
+  if (row["_raw"]) {
+    try { return JSON.parse(row["_raw"]); } catch { /* ignore */ }
+  }
+  // Fallback: localStorage (same device only, for older docs)
+  try { return JSON.parse(localStorage.getItem(`dzanex_doc_${row["Doc No"]}`) || "null"); }
   catch { return null; }
 }
 
@@ -88,9 +93,9 @@ export default function DocList({ sheetName, title }) {
   }
 
   function handleConvert(row, path) {
-    const stored = getStoredDoc(row["Doc No"]);
+    const prefill = getPrefill(row);
     setOpenConvert(null);
-    navigate(path, { state: { prefill: stored } });
+    navigate(path, { state: { prefill } });
   }
 
   if (loading) return (
