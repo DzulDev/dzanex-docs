@@ -147,8 +147,8 @@ function addItemsTable(doc, items, y, showPrice) {
       rowPageBreak:       "avoid",
       styles:             { fontSize: 9, cellPadding: 3 },
       headStyles:         { fillColor: TEAL, textColor: 255, fontStyle: "bold" },
+      bodyStyles:         { fillColor: [255, 255, 255] },
       footStyles:         { textColor: [...BLACK] },
-      alternateRowStyles: { fillColor: [250, 250, 250] },
       columnStyles: {
         0: { cellWidth: 12, halign: "center" },
         2: { cellWidth: 24, halign: "center" },
@@ -161,9 +161,8 @@ function addItemsTable(doc, items, y, showPrice) {
         const split = splitBold[data.row.index];
         if (!split) return;
         const cp = 3;
-        const isAlt = data.row.index % 2 !== 0;
         // Erase the all-bold auto-render, preserve borders
-        doc.setFillColor(...(isAlt ? [250, 250, 250] : [255, 255, 255]));
+        doc.setFillColor(255, 255, 255);
         doc.rect(data.cell.x + 0.5, data.cell.y + 0.5, data.cell.width - 1, data.cell.height - 1, "F");
         const textX = data.cell.x + cp;
         const maxW  = data.cell.width - cp * 2;
@@ -194,7 +193,7 @@ function addItemsTable(doc, items, y, showPrice) {
       body: rows,
       styles:             { fontSize: 9, cellPadding: 3 },
       headStyles:         { fillColor: TEAL, textColor: 255, fontStyle: "bold" },
-      alternateRowStyles: { fillColor: [250, 250, 250] },
+      bodyStyles:         { fillColor: [255, 255, 255] },
       columnStyles: {
         0: { cellWidth: 12, halign: "center" },
         2: { cellWidth: 16, halign: "center" },
