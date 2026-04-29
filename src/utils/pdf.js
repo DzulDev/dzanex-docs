@@ -143,7 +143,7 @@ function addItemsTable(doc, items, y, showPrice) {
         { content: "Total Amount", colSpan: 4, styles: { halign: "right", fontStyle: "bold", fillColor: [...LGRAY], textColor: [...BLACK] } },
         { content: `RM ${total.toFixed(2)}`, styles: { fontStyle: "bold", fillColor: [...LGRAY], textColor: [...BLACK] } },
       ]],
-      showFoot:           "everyPage",
+      showFoot:           "lastPage",
       rowPageBreak:       "avoid",
       styles:             { fontSize: 9, cellPadding: 3 },
       headStyles:         { fillColor: TEAL, textColor: 255, fontStyle: "bold" },
