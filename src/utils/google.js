@@ -3,6 +3,17 @@ const SCOPES = [
   "https://www.googleapis.com/auth/drive.file",
 ].join(" ");
 
+async function guardFetch(res, label) {
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    const msg = body?.error?.message || res.statusText || `HTTP ${res.status}`;
+    const err = new Error(`${label}: ${msg}`);
+    err.httpStatus = res.status;
+    throw err;
+  }
+  return res;
+}
+
 let tokenClient = null;
 let accessToken = null;
 
@@ -106,7 +117,7 @@ export async function initSheetHeaders(sheetId, token) {
 
 export async function appendRow(sheetId, sheetName, row, token) {
   const t = token || getToken();
-  await fetch(
+  const res = await fetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${sheetName}!A1:append?valueInputOption=USER_ENTERED`,
     {
       method: "POST",
@@ -117,6 +128,7 @@ export async function appendRow(sheetId, sheetName, row, token) {
       body: JSON.stringify({ values: [row] }),
     }
   );
+  await guardFetch(res, "appendRow");
 }
 
 export async function getRows(sheetId, sheetName, token) {
@@ -125,6 +137,7 @@ export async function getRows(sheetId, sheetName, token) {
     `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${sheetName}!A1:Z`,
     { headers: { Authorization: `Bearer ${t}` } }
   );
+  await guardFetch(res, "getRows");
   const data = await res.json();
   const [headers, ...rows] = data.values || [[]];
   if (!headers) return [];
@@ -203,6 +216,7 @@ export async function ensureDriveFolder(name, parentId, token) {
     },
     body: JSON.stringify(body),
   });
+  await guardFetch(create, "ensureDriveFolder");
   const folder = await create.json();
   return folder.id;
 }
@@ -228,6 +242,7 @@ export async function uploadPDF(pdfBytes, filename, folderId, token) {
       body: form,
     }
   );
+  await guardFetch(res, "uploadPDF");
   const data = await res.json();
   return data.webViewLink || (data.id ? `https://drive.google.com/file/d/${data.id}/view` : null);
 }

@@ -68,6 +68,7 @@ export default function DocList({ sheetName, title }) {
       setRows(data.reverse());
     } catch (e) {
       console.error(e);
+      if (e.httpStatus === 401) navigate("/login");
     } finally {
       setLoading(false);
     }

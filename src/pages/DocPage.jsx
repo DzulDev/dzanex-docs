@@ -21,8 +21,13 @@ export default function DocPage({ title, prefix, sheetName, showPrice, showTax, 
       if (logoDataUrl) setLogoUrl(logoDataUrl);
       if (!sheetId || !token) { navigate("/login"); return; }
       ensureRawColumn(sheetId, token); // fire-and-forget — adds _raw header to existing sheets
-      const no = await getNextDocNumber(sheetId, sheetName, prefix, token);
-      setDocNo(no);
+      try {
+        const no = await getNextDocNumber(sheetId, sheetName, prefix, token);
+        setDocNo(no);
+      } catch (e) {
+        console.error(e);
+        if (e.httpStatus === 401) navigate("/login");
+      }
     }
     init();
   }, []);
@@ -73,7 +78,12 @@ export default function DocPage({ title, prefix, sheetName, showPrice, showTax, 
       navigate("/");
     } catch (e) {
       console.error(e);
-      alert("Error saving document. Check console.");
+      if (e.httpStatus === 401) {
+        alert("Session expired. Please sign in again.");
+        navigate("/login");
+      } else {
+        alert(`Error saving document: ${e.message}`);
+      }
     } finally {
       setSaving(false);
     }
