@@ -59,15 +59,23 @@ function getPrefill(row) {
 }
 
 export default function DocList({ sheetName, title }) {
-  const [rows, setRows]           = useState([]);
-  const [loading, setLoading]     = useState(true);
-  const [updating, setUpdating]   = useState(null);
-  const [openStatus, setOpenStatus]   = useState(null);
+  const [rows, setRows]         = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [updating, setUpdating] = useState(null);
+
+  // Which row's dropdown is open + its screen coordinates
+  const [openStatus,  setOpenStatus]  = useState(null);
+  const [statusPos,   setStatusPos]   = useState(null); // { top, left }
   const [openConvert, setOpenConvert] = useState(null);
+  const [convertPos,  setConvertPos]  = useState(null); // { top, left }
+
   const navigate = useNavigate();
   const convertOptions = CONVERT_OPTIONS[sheetName] || [];
 
-  function closeAll() { setOpenStatus(null); setOpenConvert(null); }
+  function closeAll() {
+    setOpenStatus(null);
+    setOpenConvert(null);
+  }
 
   async function load() {
     setLoading(true);
@@ -111,6 +119,23 @@ export default function DocList({ sheetName, title }) {
     navigate(path, { state: { prefill } });
   }
 
+  function toggleStatus(e, row) {
+    if (openStatus === row._rowNum) { closeAll(); return; }
+    const rect = e.currentTarget.getBoundingClientRect();
+    setOpenConvert(null);
+    setStatusPos({ top: rect.bottom + 4, left: rect.left });
+    setOpenStatus(row._rowNum);
+  }
+
+  function toggleConvert(e, row) {
+    if (openConvert === row._rowNum) { closeAll(); return; }
+    const rect = e.currentTarget.getBoundingClientRect();
+    setOpenStatus(null);
+    // align dropdown right-edge to button right-edge
+    setConvertPos({ top: rect.bottom + 4, left: Math.max(4, rect.right - 180) });
+    setOpenConvert(row._rowNum);
+  }
+
   if (loading) return (
     <div className="flex items-center justify-center h-40 text-gray-400 text-sm">Loading…</div>
   );
@@ -119,11 +144,56 @@ export default function DocList({ sheetName, title }) {
     ? Object.keys(rows[0]).filter(h => h !== "Drive Link" && !h.startsWith("_"))
     : [];
 
+  const activeStatusRow  = rows.find(r => r._rowNum === openStatus);
+  const activeConvertRow = rows.find(r => r._rowNum === openConvert);
+
   return (
     <div>
       {/* Backdrop — closes any open dropdown when clicking elsewhere */}
       {(openStatus !== null || openConvert !== null) && (
-        <div className="fixed inset-0 z-10" onClick={closeAll} />
+        <div className="fixed inset-0 z-40" onClick={closeAll} />
+      )}
+
+      {/* Status dropdown — rendered fixed outside the table overflow context */}
+      {openStatus !== null && statusPos && activeStatusRow && (
+        <div
+          style={{ position: "fixed", top: statusPos.top, left: statusPos.left, zIndex: 50 }}
+          className="bg-white border border-gray-200 rounded-xl shadow-xl py-1 min-w-36"
+        >
+          {(STATUS_OPTIONS[sheetName] || ["Pending"]).map(s => (
+            <button
+              key={s}
+              onClick={() => handleStatusChange(activeStatusRow, s)}
+              className={`w-full text-left px-3 py-2 text-xs flex items-center gap-2.5 transition-colors
+                ${s === (activeStatusRow.Status || "Pending")
+                  ? "bg-gray-50 font-semibold text-gray-800"
+                  : "text-gray-600 hover:bg-gray-50"}`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_DOT[s] || "bg-gray-300"}`} />
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Convert dropdown — rendered fixed outside the table overflow context */}
+      {openConvert !== null && convertPos && activeConvertRow && (
+        <div
+          style={{ position: "fixed", top: convertPos.top, left: convertPos.left, zIndex: 50 }}
+          className="bg-white border border-gray-200 rounded-xl shadow-xl py-1 w-44"
+        >
+          <p className="px-3 pt-2 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Convert to</p>
+          {convertOptions.map(opt => (
+            <button
+              key={opt.path}
+              onClick={() => handleConvert(activeConvertRow, opt.path)}
+              className="w-full text-left px-3 py-2.5 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 transition-colors"
+            >
+              <FileText size={13} className="text-[#57A9A9] shrink-0" />
+              {opt.label}
+            </button>
+          ))}
+        </div>
       )}
 
       <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
@@ -159,43 +229,20 @@ export default function DocList({ sheetName, title }) {
                         {h === "Doc No" ? (
                           <span className="font-mono text-blue-700">{row[h]}</span>
                         ) : h === "Status" ? (
-                          <div className="relative z-20">
-                            <button
-                              disabled={updating === row._rowNum}
-                              onClick={() => {
-                                setOpenConvert(null);
-                                setOpenStatus(openStatus === row._rowNum ? null : row._rowNum);
-                              }}
-                              className={`inline-flex items-center gap-1.5 text-xs font-medium pl-2 pr-2 py-1 rounded-full border transition-all whitespace-nowrap
-                                ${STATUS_STYLE[row[h]] || "bg-gray-50 text-gray-500 border-gray-200"}
-                                ${updating === row._rowNum ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:shadow-sm"}`}
-                            >
-                              {updating === row._rowNum
-                                ? <Loader2 size={9} className="animate-spin" />
-                                : <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_DOT[row[h]] || "bg-gray-300"}`} />
-                              }
-                              {row[h] || "Pending"}
-                              <ChevronDown size={10} className={`transition-transform ${openStatus === row._rowNum ? "rotate-180" : ""}`} />
-                            </button>
-
-                            {openStatus === row._rowNum && (
-                              <div className="absolute left-0 top-9 z-20 bg-white border border-gray-200 rounded-xl shadow-xl py-1 min-w-36 overflow-hidden">
-                                {(STATUS_OPTIONS[sheetName] || ["Pending"]).map(s => (
-                                  <button
-                                    key={s}
-                                    onClick={() => handleStatusChange(row, s)}
-                                    className={`w-full text-left px-3 py-2 text-xs flex items-center gap-2.5 transition-colors
-                                      ${s === (row[h] || "Pending")
-                                        ? "bg-gray-50 font-semibold text-gray-800"
-                                        : "text-gray-600 hover:bg-gray-50"}`}
-                                  >
-                                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_DOT[s] || "bg-gray-300"}`} />
-                                    {s}
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                          </div>
+                          <button
+                            disabled={updating === row._rowNum}
+                            onClick={e => toggleStatus(e, row)}
+                            className={`inline-flex items-center gap-1.5 text-xs font-medium pl-2 pr-2 py-1 rounded-full border transition-all whitespace-nowrap
+                              ${STATUS_STYLE[row[h]] || "bg-gray-50 text-gray-500 border-gray-200"}
+                              ${updating === row._rowNum ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:shadow-sm"}`}
+                          >
+                            {updating === row._rowNum
+                              ? <Loader2 size={9} className="animate-spin" />
+                              : <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_DOT[row[h]] || "bg-gray-300"}`} />
+                            }
+                            {row[h] || "Pending"}
+                            <ChevronDown size={10} className={`transition-transform ${openStatus === row._rowNum ? "rotate-180" : ""}`} />
+                          </button>
                         ) : (
                           row[h]
                         )}
@@ -218,34 +265,13 @@ export default function DocList({ sheetName, title }) {
                     {/* Convert */}
                     {convertOptions.length > 0 && (
                       <td className="px-4 py-3">
-                        <div className="relative z-20">
-                          <button
-                            onClick={() => {
-                              setOpenStatus(null);
-                              setOpenConvert(openConvert === row._rowNum ? null : row._rowNum);
-                            }}
-                            className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-[#57A9A9]/10 text-[#57A9A9] hover:bg-[#57A9A9]/20 border border-[#57A9A9]/30 transition-colors whitespace-nowrap"
-                          >
-                            Convert
-                            <ChevronDown size={10} className={`transition-transform ${openConvert === row._rowNum ? "rotate-180" : ""}`} />
-                          </button>
-
-                          {openConvert === row._rowNum && (
-                            <div className="absolute right-0 top-9 z-20 bg-white border border-gray-200 rounded-xl shadow-xl py-1 min-w-44 overflow-hidden">
-                              <p className="px-3 pt-2 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Convert to</p>
-                              {convertOptions.map(opt => (
-                                <button
-                                  key={opt.path}
-                                  onClick={() => handleConvert(row, opt.path)}
-                                  className="w-full text-left px-3 py-2.5 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 transition-colors"
-                                >
-                                  <FileText size={13} className="text-[#57A9A9] shrink-0" />
-                                  {opt.label}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
+                        <button
+                          onClick={e => toggleConvert(e, row)}
+                          className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-[#57A9A9]/10 text-[#57A9A9] hover:bg-[#57A9A9]/20 border border-[#57A9A9]/30 transition-colors whitespace-nowrap"
+                        >
+                          Convert
+                          <ChevronDown size={10} className={`transition-transform ${openConvert === row._rowNum ? "rotate-180" : ""}`} />
+                        </button>
                       </td>
                     )}
                   </tr>
