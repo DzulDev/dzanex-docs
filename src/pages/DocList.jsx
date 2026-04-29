@@ -58,24 +58,27 @@ function getPrefill(row) {
   catch { return null; }
 }
 
+function fmtDate(d) {
+  if (!d) return "";
+  const [y, m, day] = d.split("-");
+  const mon = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return `${parseInt(day)} ${mon[parseInt(m) - 1]} ${y}`;
+}
+
 export default function DocList({ sheetName, title }) {
   const [rows, setRows]         = useState([]);
   const [loading, setLoading]   = useState(true);
   const [updating, setUpdating] = useState(null);
 
-  // Which row's dropdown is open + its screen coordinates
   const [openStatus,  setOpenStatus]  = useState(null);
-  const [statusPos,   setStatusPos]   = useState(null); // { top, left }
+  const [statusPos,   setStatusPos]   = useState(null);
   const [openConvert, setOpenConvert] = useState(null);
-  const [convertPos,  setConvertPos]  = useState(null); // { top, left }
+  const [convertPos,  setConvertPos]  = useState(null);
 
   const navigate = useNavigate();
   const convertOptions = CONVERT_OPTIONS[sheetName] || [];
 
-  function closeAll() {
-    setOpenStatus(null);
-    setOpenConvert(null);
-  }
+  function closeAll() { setOpenStatus(null); setOpenConvert(null); }
 
   async function load() {
     setLoading(true);
@@ -131,7 +134,6 @@ export default function DocList({ sheetName, title }) {
     if (openConvert === row._rowNum) { closeAll(); return; }
     const rect = e.currentTarget.getBoundingClientRect();
     setOpenStatus(null);
-    // align dropdown right-edge to button right-edge
     setConvertPos({ top: rect.bottom + 4, left: Math.max(4, rect.right - 180) });
     setOpenConvert(row._rowNum);
   }
@@ -147,14 +149,35 @@ export default function DocList({ sheetName, title }) {
   const activeStatusRow  = rows.find(r => r._rowNum === openStatus);
   const activeConvertRow = rows.find(r => r._rowNum === openConvert);
 
+  // Shared status badge button used in both card and table views
+  function StatusBadge({ row }) {
+    const status = row["Status"] || "Pending";
+    return (
+      <button
+        disabled={updating === row._rowNum}
+        onClick={e => toggleStatus(e, row)}
+        className={`inline-flex items-center gap-1.5 text-xs font-medium pl-2 pr-2 py-1 rounded-full border transition-all whitespace-nowrap
+          ${STATUS_STYLE[status] || "bg-gray-50 text-gray-500 border-gray-200"}
+          ${updating === row._rowNum ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:shadow-sm"}`}
+      >
+        {updating === row._rowNum
+          ? <Loader2 size={9} className="animate-spin" />
+          : <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_DOT[status] || "bg-gray-300"}`} />
+        }
+        {status}
+        <ChevronDown size={10} className={`transition-transform ${openStatus === row._rowNum ? "rotate-180" : ""}`} />
+      </button>
+    );
+  }
+
   return (
     <div>
-      {/* Backdrop — closes any open dropdown when clicking elsewhere */}
+      {/* Backdrop */}
       {(openStatus !== null || openConvert !== null) && (
         <div className="fixed inset-0 z-40" onClick={closeAll} />
       )}
 
-      {/* Status dropdown — rendered fixed outside the table overflow context */}
+      {/* Status dropdown — fixed, escapes overflow clipping */}
       {openStatus !== null && statusPos && activeStatusRow && (
         <div
           style={{ position: "fixed", top: statusPos.top, left: statusPos.left, zIndex: 50 }}
@@ -176,7 +199,7 @@ export default function DocList({ sheetName, title }) {
         </div>
       )}
 
-      {/* Convert dropdown — rendered fixed outside the table overflow context */}
+      {/* Convert dropdown — fixed, escapes overflow clipping */}
       {openConvert !== null && convertPos && activeConvertRow && (
         <div
           style={{ position: "fixed", top: convertPos.top, left: convertPos.left, zIndex: 50 }}
@@ -196,6 +219,7 @@ export default function DocList({ sheetName, title }) {
         </div>
       )}
 
+      {/* Header */}
       <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
         <h2 className="font-semibold text-gray-700">All {title}s ({rows.length})</h2>
         <button onClick={load} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 shrink-0">
@@ -209,77 +233,119 @@ export default function DocList({ sheetName, title }) {
           No records yet.
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
-                <tr>
-                  {headers.map(h => (
-                    <th key={h} className="px-4 py-3 text-left whitespace-nowrap">{h}</th>
-                  ))}
-                  <th className="px-4 py-3 text-left">PDF</th>
-                  {convertOptions.length > 0 && <th className="px-4 py-3 text-left">Convert</th>}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {rows.map((row, i) => (
-                  <tr key={i} className="hover:bg-gray-50">
+        <>
+          {/* ── Mobile card view (hidden on md+) ─────────────────────────── */}
+          <div className="md:hidden space-y-3">
+            {rows.map((row, i) => {
+              const party  = row["Client"] || row["Supplier"] || "";
+              const amount = row["Total"]     ? `MYR ${row["Total"]}`
+                           : row["Total Qty"] ? `Qty: ${row["Total Qty"]}`
+                           : "";
+              const items  = row["Items"] || "";
+              const truncated = items.length > 50 ? items.slice(0, 50) + "…" : items;
+
+              return (
+                <div key={i} className="bg-white rounded-xl border border-gray-200 p-4">
+                  {/* Doc No + Status */}
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <span className="font-mono text-sm font-semibold text-blue-700">{row["Doc No"]}</span>
+                    <StatusBadge row={row} />
+                  </div>
+
+                  {/* Client + Date + Amount */}
+                  {party && <p className="text-sm font-medium text-gray-800 mb-0.5">{party}</p>}
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs text-gray-400">{fmtDate(row["Date"])}</p>
+                    {amount && <p className="text-xs font-semibold text-gray-700">{amount}</p>}
+                  </div>
+                  {truncated && <p className="text-xs text-gray-400 mt-1 leading-relaxed">{truncated}</p>}
+
+                  {/* Action buttons */}
+                  <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100">
+                    {row["Drive Link"] ? (
+                      <a
+                        href={row["Drive Link"]} target="_blank" rel="noreferrer"
+                        className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-medium py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
+                      >
+                        <ExternalLink size={12} />
+                        Open PDF
+                      </a>
+                    ) : (
+                      <div className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs py-2 rounded-lg border border-gray-100 text-gray-300">
+                        No PDF
+                      </div>
+                    )}
+                    {convertOptions.length > 0 && (
+                      <button
+                        onClick={e => toggleConvert(e, row)}
+                        className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-medium py-2 rounded-lg bg-[#57A9A9]/10 text-[#57A9A9] border border-[#57A9A9]/30 hover:bg-[#57A9A9]/20 transition-colors"
+                      >
+                        Convert
+                        <ChevronDown size={10} className={`transition-transform ${openConvert === row._rowNum ? "rotate-180" : ""}`} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* ── Desktop table view (hidden below md) ─────────────────────── */}
+          <div className="hidden md:block bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
+                  <tr>
                     {headers.map(h => (
-                      <td key={h} className="px-4 py-3 text-gray-700 whitespace-nowrap">
-                        {h === "Doc No" ? (
-                          <span className="font-mono text-blue-700">{row[h]}</span>
-                        ) : h === "Status" ? (
-                          <button
-                            disabled={updating === row._rowNum}
-                            onClick={e => toggleStatus(e, row)}
-                            className={`inline-flex items-center gap-1.5 text-xs font-medium pl-2 pr-2 py-1 rounded-full border transition-all whitespace-nowrap
-                              ${STATUS_STYLE[row[h]] || "bg-gray-50 text-gray-500 border-gray-200"}
-                              ${updating === row._rowNum ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:shadow-sm"}`}
-                          >
-                            {updating === row._rowNum
-                              ? <Loader2 size={9} className="animate-spin" />
-                              : <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_DOT[row[h]] || "bg-gray-300"}`} />
-                            }
-                            {row[h] || "Pending"}
-                            <ChevronDown size={10} className={`transition-transform ${openStatus === row._rowNum ? "rotate-180" : ""}`} />
-                          </button>
+                      <th key={h} className="px-4 py-3 text-left whitespace-nowrap">{h}</th>
+                    ))}
+                    <th className="px-4 py-3 text-left">PDF</th>
+                    {convertOptions.length > 0 && <th className="px-4 py-3 text-left">Convert</th>}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {rows.map((row, i) => (
+                    <tr key={i} className="hover:bg-gray-50">
+                      {headers.map(h => (
+                        <td key={h} className="px-4 py-3 text-gray-700 whitespace-nowrap">
+                          {h === "Doc No" ? (
+                            <span className="font-mono text-blue-700">{row[h]}</span>
+                          ) : h === "Status" ? (
+                            <StatusBadge row={row} />
+                          ) : (
+                            row[h]
+                          )}
+                        </td>
+                      ))}
+                      <td className="px-4 py-3">
+                        {row["Drive Link"] ? (
+                          <a href={row["Drive Link"]} target="_blank" rel="noreferrer"
+                            className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors">
+                            <ExternalLink size={12} />
+                            Open
+                          </a>
                         ) : (
-                          row[h]
+                          <span className="text-xs text-gray-300">—</span>
                         )}
                       </td>
-                    ))}
-
-                    {/* PDF link */}
-                    <td className="px-4 py-3">
-                      {row["Drive Link"] ? (
-                        <a href={row["Drive Link"]} target="_blank" rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors">
-                          <ExternalLink size={12} />
-                          Open
-                        </a>
-                      ) : (
-                        <span className="text-xs text-gray-300">—</span>
+                      {convertOptions.length > 0 && (
+                        <td className="px-4 py-3">
+                          <button
+                            onClick={e => toggleConvert(e, row)}
+                            className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-[#57A9A9]/10 text-[#57A9A9] hover:bg-[#57A9A9]/20 border border-[#57A9A9]/30 transition-colors whitespace-nowrap"
+                          >
+                            Convert
+                            <ChevronDown size={10} className={`transition-transform ${openConvert === row._rowNum ? "rotate-180" : ""}`} />
+                          </button>
+                        </td>
                       )}
-                    </td>
-
-                    {/* Convert */}
-                    {convertOptions.length > 0 && (
-                      <td className="px-4 py-3">
-                        <button
-                          onClick={e => toggleConvert(e, row)}
-                          className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-[#57A9A9]/10 text-[#57A9A9] hover:bg-[#57A9A9]/20 border border-[#57A9A9]/30 transition-colors whitespace-nowrap"
-                        >
-                          Convert
-                          <ChevronDown size={10} className={`transition-transform ${openConvert === row._rowNum ? "rotate-180" : ""}`} />
-                        </button>
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );
