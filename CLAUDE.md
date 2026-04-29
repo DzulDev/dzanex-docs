@@ -17,6 +17,17 @@ npm run preview   # preview the production build
 
 There is no test suite.
 
+## Document Workflow
+
+**Quotation → Invoice → Delivery Order** (PO is optional, sent to supplier not client)
+
+1. **QT** — Sent to client before work. They approve or reject.
+2. **INV** — Sent after client agrees. Requests payment.
+3. **PO** — Dzanex buys materials from a supplier. Not always needed.
+4. **DO** — Delivery confirmation. Client signs to acknowledge receipt.
+
+Quotation is always first. Not every job needs all 4.
+
 ## Architecture
 
 **Dzanex Docs** is a fully client-side document management system for generating business PDFs (Quotation, Invoice, Purchase Order, Delivery Order) and syncing records to Google Sheets/Drive. There is no backend — all API calls go directly from the browser.
