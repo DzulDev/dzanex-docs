@@ -19,20 +19,21 @@ export default function DocForm({
   partyLabel = "Client",
   onSave,
   saving,
+  initialData = null,
 }) {
   const today = format(new Date(), "yyyy-MM-dd");
 
   const [form, setForm] = useState({
     docNo,
     date: today,
-    validUntil: "",
-    taxRate: 0,
-    subject: "",
-    paymentTerms: "",
-    notes: "",
-    terms: DEFAULT_TERMS.map(t => ({ ...t })),
-    to: { name: "", address: "", contact: "", email: "", attn: "" },
-    items: [{ description: "", qty: 1, unit: "unit", unitPrice: 0, notes: "", isBold: false }],
+    validUntil:   "",
+    taxRate:      initialData?.taxRate      ?? 0,
+    subject:      initialData?.subject      || "",
+    paymentTerms: initialData?.paymentTerms || "",
+    notes:        initialData?.notes        || "",
+    terms:        DEFAULT_TERMS.map(t => ({ ...t })),
+    to:           initialData?.to           || { name: "", address: "", contact: "", email: "", attn: "" },
+    items:        initialData?.items        || [{ description: "", qty: 1, unit: "unit", unitPrice: 0, notes: "", isBold: false }],
   });
 
   function set(field, value) {

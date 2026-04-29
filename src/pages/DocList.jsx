@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { getConfig } from "../utils/storage";
 import { getRows, updateCell, getToken } from "../utils/google";
-import { ExternalLink, RefreshCw } from "lucide-react";
+import { ExternalLink, RefreshCw, ArrowRight } from "lucide-react";
 
 const STATUS_OPTIONS = {
   Quotation: ["Pending", "Accepted", "Rejected"],
@@ -18,6 +19,21 @@ const STATUS_COL = {
   DO:        "F",
 };
 
+const CONVERT_OPTIONS = {
+  Quotation: [
+    { label: "Invoice", path: "/invoice" },
+    { label: "Delivery Order", path: "/do" },
+  ],
+  Invoice: [
+    { label: "Delivery Order", path: "/do" },
+  ],
+};
+
+function getStoredDoc(docNo) {
+  try { return JSON.parse(localStorage.getItem(`dzanex_doc_${docNo}`) || "null"); }
+  catch { return null; }
+}
+
 const STATUS_STYLE = {
   Pending:   "bg-yellow-100 text-yellow-700",
   Accepted:  "bg-green-100 text-green-700",
@@ -32,7 +48,10 @@ const STATUS_STYLE = {
 export default function DocList({ sheetName, title }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [updating, setUpdating] = useState(null); // rowNum being updated
+  const [updating, setUpdating] = useState(null);
+  const [openConvert, setOpenConvert] = useState(null);
+  const navigate = useNavigate();
+  const convertOptions = CONVERT_OPTIONS[sheetName] || []; // rowNum being updated
 
   async function load() {
     setLoading(true);
@@ -68,6 +87,12 @@ export default function DocList({ sheetName, title }) {
     }
   }
 
+  function handleConvert(row, path) {
+    const stored = getStoredDoc(row["Doc No"]);
+    setOpenConvert(null);
+    navigate(path, { state: { prefill: stored } });
+  }
+
   if (loading) return (
     <div className="flex items-center justify-center h-40 text-gray-400 text-sm">Loading…</div>
   );
@@ -100,6 +125,7 @@ export default function DocList({ sheetName, title }) {
                     <th key={h} className="px-4 py-3 text-left whitespace-nowrap">{h}</th>
                   ))}
                   <th className="px-4 py-3 text-left">PDF</th>
+                  {convertOptions.length > 0 && <th className="px-4 py-3 text-left">Convert</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -134,6 +160,31 @@ export default function DocList({ sheetName, title }) {
                         </a>
                       )}
                     </td>
+                    {convertOptions.length > 0 && (
+                      <td className="px-4 py-3 relative">
+                        <button
+                          onClick={() => setOpenConvert(openConvert === row._rowNum ? null : row._rowNum)}
+                          className="flex items-center gap-1 text-xs font-medium text-[#57A9A9] hover:text-[#1B3A5C] transition-colors"
+                        >
+                          <ArrowRight size={13} />
+                          Convert
+                        </button>
+                        {openConvert === row._rowNum && (
+                          <div className="absolute left-0 top-8 z-10 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-36">
+                            {convertOptions.map(opt => (
+                              <button
+                                key={opt.path}
+                                onClick={() => handleConvert(row, opt.path)}
+                                className="w-full text-left px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                              >
+                                <ArrowRight size={11} className="text-[#57A9A9]" />
+                                {opt.label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

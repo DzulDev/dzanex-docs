@@ -1,15 +1,18 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import DocForm from "../components/DocForm";
 import DocList from "./DocList";
 import { getConfig } from "../utils/storage";
 import { getToken, getNextDocNumber, appendRow, ensureDriveFolder, uploadPDF } from "../utils/google";
+
 export default function DocPage({ title, prefix, sheetName, showPrice, showTax, showValidUntil, partyLabel, generateFn }) {
   const [docNo, setDocNo] = useState("");
   const [saving, setSaving] = useState(false);
-  const [view, setView] = useState("form"); // form | list
+  const [view, setView] = useState("form");
   const [logoUrl, setLogoUrl] = useState(null);
   const navigate = useNavigate();
+  const location = useLocation();
+  const prefill = location.state?.prefill || null;
 
   useEffect(() => {
     async function init() {
@@ -39,7 +42,6 @@ export default function DocPage({ title, prefix, sheetName, showPrice, showTax, 
 
     setSaving(true);
     try {
-      // get or create folder
       const rootId = driveFolderId;
       const folderId = await ensureDriveFolder(sheetName, rootId, token);
 
@@ -60,6 +62,11 @@ export default function DocPage({ title, prefix, sheetName, showPrice, showTax, 
            "Pending", driveLink, formData.notes];
 
       await appendRow(sheetId, sheetName, row, token);
+
+      // Save full form data for Convert feature
+      // eslint-disable-next-line no-unused-vars
+      const { _action, ...saveData } = formData;
+      localStorage.setItem(`dzanex_doc_${formData.docNo}`, JSON.stringify(saveData));
 
       alert(`${title} saved!\n${formData.docNo}\nDrive link: ${driveLink}`);
       navigate("/");
@@ -100,6 +107,7 @@ export default function DocPage({ title, prefix, sheetName, showPrice, showTax, 
             partyLabel={partyLabel}
             onSave={handleSave}
             saving={saving}
+            initialData={prefill}
           />
         ) : (
           <div className="flex items-center justify-center h-40 text-gray-400 text-sm">Loading…</div>
