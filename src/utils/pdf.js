@@ -260,6 +260,65 @@ function addBankDetails(doc, y) {
   doc.text(COMPANY.bank,            M, y); y += 5;
   doc.text(COMPANY.bankAccountName, M, y); y += 5;
   doc.text(COMPANY.bankAccount,     M, y);
+  return y + 5;
+}
+
+function addSignature(doc, y, type) {
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const mid   = pageW / 2 + 5;
+  const SIG_H = 45; // space needed
+
+  // Start new page if not enough room
+  if (y + SIG_H > pageH - 15) { doc.addPage(); y = 20; }
+
+  const leftEnd  = mid - 10;
+  const rightEnd = pageW - M;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8.5);
+  doc.setTextColor(...BLACK);
+
+  if (type === "quotation") {
+    doc.text("Accepted by:", M, y);
+    doc.text("Submitted by:", mid, y);
+  } else {
+    doc.text("Issued by:", mid, y);
+  }
+  y += 22; // signature space
+
+  // Signature lines
+  doc.setDrawColor(...MGRAY);
+  doc.setLineWidth(0.4);
+  if (type === "quotation") doc.line(M, y, leftEnd, y);
+  doc.line(mid, y, rightEnd, y);
+  y += 4;
+
+  // Labels under lines
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7.5);
+  doc.setTextColor(...GRAY);
+  if (type === "quotation") doc.text("Signature & Stamp", M, y);
+  doc.text("Signature & Stamp", mid, y);
+  y += 5;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7.5);
+  doc.setTextColor(...BLACK);
+  if (type === "quotation") {
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...DARK);
+    doc.text("Date: _____________________", M, y);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...BLACK);
+  }
+  doc.text(COMPANY.name, mid, y); y += 4;
+
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...DARK);
+  doc.text("Date: _____________________", mid, y);
+
+  return y + 8;
 }
 
 function addFooter(doc) {
@@ -284,7 +343,8 @@ export function generateQuotation(docData, logoDataUrl) {
   y = addSectionTitle(doc, docData.subject, y);
   const { finalY, total } = addItemsTable(doc, docData.items, y, true);
   y = addTerms(doc, finalY + 10, total * 0.8, docData.paymentTerms, docData.terms);
-  addBankDetails(doc, y);
+  y = addBankDetails(doc, y);
+  addSignature(doc, y + 5, "quotation");
   addFooter(doc);
 
   return doc.output("arraybuffer");
@@ -312,8 +372,9 @@ export function generateInvoice(docData, logoDataUrl) {
   doc.setFont("helvetica", "italic");
   doc.setFontSize(8);
   doc.setTextColor(...GRAY);
-  doc.text("Please make payment within 14 days of invoice date.", M, y);
+  doc.text("Please make payment within 14 days of invoice date.", M, y); y += 8;
 
+  addSignature(doc, y, "invoice");
   addFooter(doc);
   return doc.output("arraybuffer");
 }
