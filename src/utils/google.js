@@ -185,6 +185,53 @@ export async function updateCell(sheetId, sheetName, rowNum, col, value, token) 
   );
 }
 
+export async function getSheetGid(sheetId, sheetName, token) {
+  const t = token || getToken();
+  const res = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}?fields=sheets.properties`,
+    { headers: { Authorization: `Bearer ${t}` } }
+  );
+  await guardFetch(res, "getSheetGid");
+  const data = await res.json();
+  const sheet = data.sheets?.find(s => s.properties.title === sheetName);
+  return sheet?.properties?.sheetId ?? 0;
+}
+
+export async function deleteSheetRow(sheetId, sheetGid, rowNum, token) {
+  const t = token || getToken();
+  const res = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}:batchUpdate`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${t}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        requests: [{
+          deleteDimension: {
+            range: {
+              sheetId: sheetGid,
+              dimension: "ROWS",
+              startIndex: rowNum - 1,
+              endIndex: rowNum,
+            },
+          },
+        }],
+      }),
+    }
+  );
+  await guardFetch(res, "deleteSheetRow");
+}
+
+export async function deleteDriveFile(driveLink, token) {
+  const t = token || getToken();
+  const fileId = driveLink?.match(/\/d\/([a-zA-Z0-9_-]+)/)?.[1];
+  if (!fileId) return;
+  const res = await fetch(
+    `https://www.googleapis.com/drive/v3/files/${fileId}`,
+    { method: "DELETE", headers: { Authorization: `Bearer ${t}` } }
+  );
+  if (!res.ok) await guardFetch(res, "deleteDriveFile");
+}
+
 export async function getNextDocNumber(sheetId, sheetName, prefix, token) {
   const rows = await getRows(sheetId, sheetName, token);
   const year = new Date().getFullYear();

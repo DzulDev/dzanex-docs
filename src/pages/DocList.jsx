@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getConfig } from "../utils/storage";
-import { getRows, updateCell, getToken } from "../utils/google";
-import { ChevronDown, ExternalLink, FileText, Loader2, RefreshCw } from "lucide-react";
+import { getRows, updateCell, getToken, getSheetGid, deleteSheetRow, deleteDriveFile } from "../utils/google";
+import { ChevronDown, ExternalLink, FileText, Loader2, RefreshCw, Trash2 } from "lucide-react";
 
 const STATUS_OPTIONS = {
   Quotation: ["Pending", "Accepted", "Rejected"],
@@ -69,6 +69,8 @@ export default function DocList({ sheetName, title }) {
   const [rows, setRows]         = useState([]);
   const [loading, setLoading]   = useState(true);
   const [updating, setUpdating] = useState(null);
+  const [deleting, setDeleting] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
 
   const [openStatus,  setOpenStatus]  = useState(null);
   const [statusPos,   setStatusPos]   = useState(null);
@@ -113,6 +115,27 @@ export default function DocList({ sheetName, title }) {
       console.error(e);
     } finally {
       setUpdating(null);
+    }
+  }
+
+  async function handleDelete(row) {
+    const { sheetId } = getConfig();
+    const token = getToken();
+    if (!sheetId || !token) return;
+    setConfirmDelete(null);
+    setDeleting(row._rowNum);
+    try {
+      const gid = await getSheetGid(sheetId, sheetName, token);
+      await deleteSheetRow(sheetId, gid, row._rowNum, token);
+      await deleteDriveFile(row["Drive Link"], token);
+      // Reload so all _rowNum values stay accurate
+      await load();
+    } catch (e) {
+      console.error(e);
+      if (e.httpStatus === 401) navigate("/login");
+      else alert(`Delete failed: ${e.message}`);
+    } finally {
+      setDeleting(null);
     }
   }
 
@@ -284,6 +307,30 @@ export default function DocList({ sheetName, title }) {
                         <ChevronDown size={10} className={`transition-transform ${openConvert === row._rowNum ? "rotate-180" : ""}`} />
                       </button>
                     )}
+                    {/* Delete */}
+                    {confirmDelete === row._rowNum ? (
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => handleDelete(row)}
+                          className="text-xs font-medium text-red-600 border border-red-200 px-2.5 py-2 rounded-lg hover:bg-red-50 transition-colors">
+                          Delete
+                        </button>
+                        <button onClick={() => setConfirmDelete(null)}
+                          className="text-xs text-gray-400 border border-gray-200 px-2.5 py-2 rounded-lg hover:bg-gray-50 transition-colors">
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        disabled={deleting === row._rowNum}
+                        onClick={() => setConfirmDelete(row._rowNum)}
+                        className="p-2 rounded-lg border border-gray-200 text-gray-300 hover:text-red-400 hover:border-red-200 transition-colors disabled:opacity-50"
+                      >
+                        {deleting === row._rowNum
+                          ? <Loader2 size={14} className="animate-spin" />
+                          : <Trash2 size={14} />
+                        }
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -301,6 +348,7 @@ export default function DocList({ sheetName, title }) {
                     ))}
                     <th className="px-4 py-3 text-left">PDF</th>
                     {convertOptions.length > 0 && <th className="px-4 py-3 text-left">Convert</th>}
+                    <th className="px-4 py-3"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -339,6 +387,33 @@ export default function DocList({ sheetName, title }) {
                           </button>
                         </td>
                       )}
+                      {/* Delete */}
+                      <td className="px-4 py-3">
+                        {confirmDelete === row._rowNum ? (
+                          <div className="flex items-center gap-1.5 whitespace-nowrap">
+                            <span className="text-xs text-gray-500">Delete?</span>
+                            <button
+                              onClick={() => handleDelete(row)}
+                              className="text-xs font-medium text-red-600 hover:text-red-800 transition-colors"
+                            >Yes</button>
+                            <button
+                              onClick={() => setConfirmDelete(null)}
+                              className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                            >No</button>
+                          </div>
+                        ) : (
+                          <button
+                            disabled={deleting === row._rowNum}
+                            onClick={() => setConfirmDelete(row._rowNum)}
+                            className="text-gray-300 hover:text-red-400 transition-colors disabled:opacity-50"
+                          >
+                            {deleting === row._rowNum
+                              ? <Loader2 size={14} className="animate-spin" />
+                              : <Trash2 size={14} />
+                            }
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
