@@ -63,7 +63,7 @@ export async function createSpreadsheet(token) {
     properties: { title },
   }));
   const body = {
-    properties: { title: "Dzanex Docs — Records" },
+    properties: { title: "Dzanex Docs - Record Documents" },
     sheets,
   };
   const res = await fetch("https://sheets.googleapis.com/v4/spreadsheets", {
