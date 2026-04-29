@@ -62,14 +62,17 @@ export default function Layout({ children }) {
         ${open ? "translate-x-0" : "-translate-x-full"}
         lg:relative lg:translate-x-0
       `}>
-        <div className="px-5 py-5 border-b border-[#57A9A9]/30 flex items-center gap-3">
-          <img src="/logo.png" alt="Dzanex" className="w-10 h-10 object-contain" />
-          <div>
-            <p className="text-xs text-[#57A9A9] font-medium">DZANEX TECHNOLOGY</p>
-            <p className="text-xs text-[#57A9A9]/70 mt-0.5">TR0320764-P</p>
+        {/* Logo + company */}
+        <div className="px-5 py-5 border-b border-white/10 flex items-center gap-3">
+          <img src="/logo.png" alt="Dzanex" className="w-10 h-10 object-contain shrink-0" />
+          <div className="min-w-0">
+            <p className="text-xs font-bold text-[#57A9A9] tracking-wide leading-tight">DZANEX TECHNOLOGY</p>
+            <p className="text-[11px] text-[#E8917A]/80 mt-0.5 font-medium">TR0320764-P</p>
           </div>
         </div>
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+
+        {/* Nav links */}
+        <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
           {NAV.map(({ to, icon: Icon, label }) => (
             <NavLink
               key={to}
@@ -77,22 +80,28 @@ export default function Layout({ children }) {
               end={to === "/"}
               onClick={() => setOpen(false)}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
+                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all
                 ${isActive
-                  ? "bg-[#57A9A9] text-white"
-                  : "text-white/70 hover:bg-[#57A9A9]/20 hover:text-white"
+                  ? "bg-[#57A9A9] text-white shadow-sm"
+                  : "text-white/60 hover:bg-white/8 hover:text-white"
                 }`
               }
             >
-              <Icon size={17} />
-              {label}
+              {({ isActive }) => (
+                <>
+                  <Icon size={17} className={isActive ? "text-white" : "text-[#57A9A9]/70"} />
+                  {label}
+                </>
+              )}
             </NavLink>
           ))}
         </nav>
-        <div className="p-4 border-t border-[#57A9A9]/30">
+
+        {/* Sign out */}
+        <div className="p-4 border-t border-white/10">
           <button
             onClick={handleSignOut}
-            className="flex items-center gap-2 text-sm text-white/60 hover:text-white transition-colors"
+            className="flex items-center gap-2 text-sm text-[#E8917A]/70 hover:text-[#E8917A] transition-colors"
           >
             <LogOut size={15} />
             Sign out
