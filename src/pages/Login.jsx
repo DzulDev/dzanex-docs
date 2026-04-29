@@ -1,17 +1,16 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { signIn } from "../utils/google";
+import { signIn, ensureDriveFolder } from "../utils/google";
 import { getConfig, saveConfig } from "../utils/storage";
-import { createSpreadsheet, initSheetHeaders, ensureDriveFolder } from "../utils/google";
 import { Loader2 } from "lucide-react";
 
+const DEFAULT_CLIENT_ID = "951409197659-jltf9l48kd0hveptnbd1vuduqghek8op.apps.googleusercontent.com";
+const DEFAULT_SHEET_ID  = "15cIdmWjr8_PtJVZPRQM4KrpRgU1EKjIbc7A3h_0sPPE";
+
 export default function Login() {
-  const DEFAULT_CLIENT_ID = "951409197659-jltf9l48kd0hveptnbd1vuduqghek8op.apps.googleusercontent.com";
   const [clientId, setClientId] = useState(getConfig().clientId || DEFAULT_CLIENT_ID);
-  const [existingSheetId, setExistingSheetId] = useState("");
-  const [showReconnect, setShowReconnect] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError]   = useState("");
   const navigate = useNavigate();
 
   async function handleLogin() {
@@ -21,27 +20,18 @@ export default function Login() {
     setError("");
     try {
       const token = await signIn(clientId.trim());
-      let { sheetId, driveFolderId } = getConfig();
 
-      // Allow reconnecting to existing sheet on a new device
-      if (!sheetId && existingSheetId.trim()) {
-        sheetId = existingSheetId.trim();
-        saveConfig({ sheetId });
-      }
+      // Always use the fixed sheet — never create a new one
+      saveConfig({ sheetId: DEFAULT_SHEET_ID });
 
-      if (!sheetId) {
-        sheetId = await createSpreadsheet(token);
-        await initSheetHeaders(sheetId, token);
-        saveConfig({ sheetId });
-      }
-
+      let { driveFolderId } = getConfig();
       if (!driveFolderId) {
         const rootId = await ensureDriveFolder("Dzanex Docs", null, token);
         await Promise.all([
           ensureDriveFolder("Quotation", rootId, token),
-          ensureDriveFolder("Invoice", rootId, token),
-          ensureDriveFolder("PO", rootId, token),
-          ensureDriveFolder("DO", rootId, token),
+          ensureDriveFolder("Invoice",   rootId, token),
+          ensureDriveFolder("PO",        rootId, token),
+          ensureDriveFolder("DO",        rootId, token),
         ]);
         saveConfig({ driveFolderId: rootId });
       }
@@ -74,30 +64,8 @@ export default function Login() {
               onChange={(e) => setClientId(e.target.value)}
             />
             <p className="text-xs text-gray-400 mt-1">
-              Paste your Client ID from Google Cloud Console → APIs & Services → Credentials
+              Paste your Client ID from Google Cloud Console → APIs &amp; Services → Credentials
             </p>
-          </div>
-
-          {/* Reconnect on new device */}
-          <div>
-            <button
-              type="button"
-              onClick={() => setShowReconnect(v => !v)}
-              className="text-xs text-blue-600 hover:underline"
-            >
-              {showReconnect ? "▾" : "▸"} Using a new device? Reconnect to existing data
-            </button>
-            {showReconnect && (
-              <div className="mt-2">
-                <label className="label">Existing Sheet ID <span className="text-gray-400 font-normal">(from Settings on your other device)</span></label>
-                <input
-                  className="input font-mono text-xs"
-                  placeholder="Paste your Google Sheets ID here"
-                  value={existingSheetId}
-                  onChange={(e) => setExistingSheetId(e.target.value)}
-                />
-              </div>
-            )}
           </div>
 
           {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
@@ -115,17 +83,8 @@ export default function Login() {
                 <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
               </svg>
             )}
-            {loading ? "Setting up…" : "Sign in with Google"}
+            {loading ? "Connecting…" : "Sign in with Google"}
           </button>
-        </div>
-
-        <div className="mt-6 p-4 bg-amber-50 rounded-xl text-xs text-amber-800 space-y-1">
-          <p className="font-semibold">First-time setup?</p>
-          <p>1. Go to <span className="font-mono">console.cloud.google.com</span></p>
-          <p>2. Create a project → Enable Sheets API + Drive API</p>
-          <p>3. Create OAuth 2.0 credentials (Web app type)</p>
-          <p>4. Add <span className="font-mono">http://localhost:5173</span> to Authorised JS origins</p>
-          <p>5. Paste the Client ID above</p>
         </div>
       </div>
     </div>
