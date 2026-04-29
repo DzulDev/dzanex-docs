@@ -61,7 +61,6 @@ export default function DocForm({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-800">{title}</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Doc No: <span className="font-mono text-blue-700">{docNo}</span></p>
         </div>
         <div className="flex gap-2 flex-wrap">
           <button
@@ -87,6 +86,10 @@ export default function DocForm({
 
       {/* Doc Info */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
+        <div>
+          <label className="label">Doc No</label>
+          <input className="input font-mono" value={form.docNo} onChange={(e) => set("docNo", e.target.value)} />
+        </div>
         <div>
           <label className="label">Date</label>
           <input type="date" className="input" value={form.date} onChange={(e) => set("date", e.target.value)} />
