@@ -47,7 +47,7 @@ export default function DocPage({ title, prefix, sheetName, showPrice, showTax, 
       const folderId = await ensureDriveFolder(sheetName, rootId, token);
 
       const filename = `${formData.docNo} - ${formData.to.name || "Unknown"}.pdf`;
-      const driveLink = await uploadPDF(pdfBytes, filename, folderId, token);
+      const driveLink = await uploadPDF(pdfBytes, filename, folderId, token) || "";
 
       const subtotal = formData.items.reduce((s, i) => s + Number(i.qty || 0) * Number(i.unitPrice || 0), 0);
       const tax = subtotal * (Number(formData.taxRate) / 100);

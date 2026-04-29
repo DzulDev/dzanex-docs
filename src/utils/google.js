@@ -229,5 +229,5 @@ export async function uploadPDF(pdfBytes, filename, folderId, token) {
     }
   );
   const data = await res.json();
-  return data.webViewLink;
+  return data.webViewLink || (data.id ? `https://drive.google.com/file/d/${data.id}/view` : null);
 }
