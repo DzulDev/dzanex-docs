@@ -256,9 +256,10 @@ function addBankDetails(doc, y) {
   doc.text("Account Number :", M, y); y += 5;
 
   doc.setFont("helvetica", "normal");
+  doc.setFontSize(7);
   doc.setTextColor(...DARK);
-  doc.text(COMPANY.bank,            M, y); y += 5;
-  doc.text(COMPANY.bankAccountName, M, y); y += 5;
+  doc.text(COMPANY.bank,            M, y); y += 4;
+  doc.text(COMPANY.bankAccountName, M, y); y += 4;
   doc.text(COMPANY.bankAccount,     M, y);
   return y + 5;
 }
@@ -365,9 +366,10 @@ export function generateInvoice(docData, logoDataUrl) {
   doc.setTextColor(...BLACK);
   doc.text("Account Number :", M, y); y += 5;
   doc.setFont("helvetica", "normal");
+  doc.setFontSize(7);
   doc.setTextColor(...DARK);
-  doc.text(COMPANY.bank,            M, y); y += 5;
-  doc.text(COMPANY.bankAccountName, M, y); y += 5;
+  doc.text(COMPANY.bank,            M, y); y += 4;
+  doc.text(COMPANY.bankAccountName, M, y); y += 4;
   doc.text(COMPANY.bankAccount,     M, y); y += 8;
   doc.setFont("helvetica", "italic");
   doc.setFontSize(8);
