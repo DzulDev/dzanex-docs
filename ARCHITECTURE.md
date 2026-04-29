@@ -507,6 +507,34 @@ export default defineConfig({
 
 ---
 
+## Delete Document
+
+Three functions in `utils/google.js`:
+
+```javascript
+// 1. Get numeric sheet tab ID (needed for deleteDimension)
+getSheetGid(sheetId, sheetName, token)
+// → GET /spreadsheets/{id}?fields=sheets.properties
+
+// 2. Delete a row (rowNum is 1-indexed from getRows)
+deleteSheetRow(sheetId, sheetGid, rowNum, token)
+// → POST /spreadsheets/{id}:batchUpdate
+// → deleteDimension { startIndex: rowNum-1, endIndex: rowNum }
+
+// 3. Delete PDF from Drive
+deleteDriveFile(driveLink, token)
+// → extracts fileId with /\/d\/([a-zA-Z0-9_-]+)/
+// → DELETE /drive/v3/files/{fileId}
+```
+
+UI pattern (DocList):
+- Trash icon button on each row (desktop) and card (mobile)
+- Click → `confirmDelete` state set to rowNum → shows inline "Delete? Yes / No"
+- Yes → calls `handleDelete(row)` → sets `deleting` state → runs 3 API calls → reloads list
+- After delete always call `load()` to refresh `_rowNum` values for all remaining rows
+
+---
+
 ## Dependencies (package.json)
 
 ```json

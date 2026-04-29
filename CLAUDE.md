@@ -94,6 +94,17 @@ Sheet columns are defined in the `HEADERS` object in `utils/google.js`. The Shee
 - `_raw` column (last column on every sheet) stores the full form JSON — enables cross-device Convert feature
 - `ensureRawColumn()` fire-and-forgets on every DocPage load to patch older sheets that lack the `_raw` column
 
+### Delete Document
+
+Three new functions in `utils/google.js`:
+- `getSheetGid(sheetId, sheetName, token)` — fetches the numeric tab ID needed for `deleteDimension`
+- `deleteSheetRow(sheetId, sheetGid, rowNum, token)` — `batchUpdate` with `deleteDimension` (rowNum is 1-indexed; API uses 0-indexed startIndex = rowNum-1)
+- `deleteDriveFile(driveLink, token)` — extracts fileId from Drive link via regex `/\/d\/([a-zA-Z0-9_-]+)/`, calls `DELETE /drive/v3/files/{fileId}`
+
+After delete, `load()` is called to reload all rows — keeps `_rowNum` values accurate for subsequent operations.
+
+UI: trash icon button → inline "Delete? Yes / No" confirm (no `window.confirm()`). Works in both desktop table and mobile card view.
+
 ### Styling
 
 - Tailwind v4 (CSS-first, configured via `@tailwindcss/vite` plugin — no `tailwind.config.js`)
