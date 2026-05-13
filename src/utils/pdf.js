@@ -121,7 +121,7 @@ function addItemsTable(doc, items, y, showPrice) {
       const desc = bullets.length
         ? item.description + "\n" + bullets.join("\n")
         : item.description;
-      if (item.isBold && bullets.length) {
+      if (item.isBold) {
         splitBold[i] = { main: item.description, bullets };
       }
       const qty   = parseFloat(item.qty)      || 0;
