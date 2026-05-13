@@ -10,15 +10,17 @@ export default function DocPage({ title, prefix, sheetName, showPrice, showTax, 
   const [saving, setSaving] = useState(false);
   const [view, setView] = useState("form");
   const [logoUrl, setLogoUrl] = useState(null);
+  const [stampUrl, setStampUrl] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
   const prefill = location.state?.prefill || null;
 
   useEffect(() => {
     async function init() {
-      const { sheetId, logoDataUrl } = getConfig();
+      const { sheetId, logoDataUrl, stampDataUrl } = getConfig();
       const token = getToken();
       if (logoDataUrl) setLogoUrl(logoDataUrl);
+      if (stampDataUrl) setStampUrl(stampDataUrl);
       if (!sheetId || !token) { navigate("/login"); return; }
       ensureRawColumn(sheetId, token); // fire-and-forget — adds _raw header to existing sheets
       try {
@@ -37,7 +39,7 @@ export default function DocPage({ title, prefix, sheetName, showPrice, showTax, 
     const token = getToken();
     const { sheetId, driveFolderId } = getConfig();
 
-    const pdfBytes = generateFn(formData, logoUrl);
+    const pdfBytes = generateFn(formData, logoUrl, stampUrl);
 
     if (action === "preview") {
       const blob = new Blob([pdfBytes], { type: "application/pdf" });

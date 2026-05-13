@@ -26,8 +26,21 @@ function preloadLogo() {
     .catch(() => {});
 }
 
+function preloadStamp() {
+  const { stampDataUrl } = getConfig();
+  if (stampDataUrl) return;
+  fetch("/stamp.png")
+    .then((r) => r.blob())
+    .then((blob) => {
+      const reader = new FileReader();
+      reader.onload = () => saveConfig({ stampDataUrl: reader.result });
+      reader.readAsDataURL(blob);
+    })
+    .catch(() => {});
+}
+
 export default function App() {
-  useEffect(() => { preloadLogo(); }, []);
+  useEffect(() => { preloadLogo(); preloadStamp(); }, []);
 
   return (
     <BrowserRouter>
