@@ -289,10 +289,10 @@ function addSignature(doc, y, type, stampDataUrl, date) {
     doc.text("Issued by:", mid, y);
   }
 
-  // Stamp — 18mm, right-aligned in the company column
+  // Stamp — 18mm, centered in the company column
   if (stampDataUrl) {
     const stampSize = 18;
-    const stampX = rightEnd - stampSize - 2;
+    const stampX = mid + (rightEnd - mid - stampSize) / 2;
     doc.addImage(stampDataUrl, "PNG", stampX, y + 2, stampSize, stampSize);
   }
 
@@ -404,7 +404,7 @@ export function generatePO(docData, logoDataUrl, stampDataUrl) {
   y = finalY + 4;
 
   if (stampDataUrl) {
-    doc.addImage(stampDataUrl, "PNG", pageW - M - 20, y, 18, 18);
+    doc.addImage(stampDataUrl, "PNG", pageW - 80 + (80 - M - 18) / 2, y, 18, 18);
   }
 
   y += 20;
@@ -437,7 +437,7 @@ export function generateDO(docData, logoDataUrl, stampDataUrl) {
   doc.text("Received by:", M, y); y += 8;
 
   if (stampDataUrl) {
-    doc.addImage(stampDataUrl, "PNG", pageW - M - 20, y, 18, 18);
+    doc.addImage(stampDataUrl, "PNG", pageW - 80 + (80 - M - 18) / 2, y, 18, 18);
   }
 
   doc.setDrawColor(...MGRAY);
