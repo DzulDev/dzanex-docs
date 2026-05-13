@@ -377,7 +377,7 @@ export function generateInvoice(docData, logoDataUrl) {
   doc.setTextColor(...GRAY);
   doc.text("Please make payment within 14 days of invoice date.", M, y); y += 8;
 
-  addSignature(doc, y, "invoice");
+  // addSignature(doc, y, "invoice"); // temporarily removed
   addFooter(doc);
   return doc.output("arraybuffer");
 }
