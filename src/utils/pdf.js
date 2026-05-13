@@ -391,7 +391,7 @@ export function generateInvoice(docData, logoDataUrl, stampDataUrl) {
   return doc.output("arraybuffer");
 }
 
-export function generatePO(docData, logoDataUrl) {
+export function generatePO(docData, logoDataUrl, stampDataUrl) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   doc.__taxRate = Number(docData.taxRate) || 0;
 
@@ -401,7 +401,13 @@ export function generatePO(docData, logoDataUrl) {
   const { finalY } = addItemsTable(doc, docData.items, y, true);
 
   const pageW = doc.internal.pageSize.getWidth();
-  y = finalY + 16;
+  y = finalY + 4;
+
+  if (stampDataUrl) {
+    doc.addImage(stampDataUrl, "PNG", pageW - M - 20, y, 18, 18);
+  }
+
+  y += 20;
   doc.setDrawColor(...MGRAY);
   doc.line(pageW - 80, y, pageW - M, y);
   doc.setFont("helvetica", "normal");
@@ -409,12 +415,13 @@ export function generatePO(docData, logoDataUrl) {
   doc.setTextColor(...DARK);
   doc.text("Approved by",   pageW - 80, y + 5);
   doc.text(COMPANY.name,    pageW - 80, y + 10);
+  doc.text(`Date: ${format(new Date(docData.date), "d MMMM yyyy")}`, pageW - 80, y + 15);
 
   addFooter(doc);
   return doc.output("arraybuffer");
 }
 
-export function generateDO(docData, logoDataUrl) {
+export function generateDO(docData, logoDataUrl, stampDataUrl) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
 
   let y = addHeader(doc, "Delivery Order", docData.docNo, docData.date, logoDataUrl);
@@ -429,17 +436,22 @@ export function generateDO(docData, logoDataUrl) {
   doc.setTextColor(...BLACK);
   doc.text("Received by:", M, y); y += 8;
 
+  if (stampDataUrl) {
+    doc.addImage(stampDataUrl, "PNG", pageW - M - 20, y, 18, 18);
+  }
+
   doc.setDrawColor(...MGRAY);
-  doc.line(M,          y + 12, 90,        y + 12);
-  doc.line(pageW - 80, y + 12, pageW - M, y + 12);
+  doc.line(M,          y + 20, 90,        y + 20);
+  doc.line(pageW - 80, y + 20, pageW - M, y + 20);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
   doc.setTextColor(...GRAY);
-  doc.text("Name / Signature / Date", M,          y + 17);
+  doc.text("Name / Signature / Date", M,          y + 25);
   doc.setTextColor(...DARK);
-  doc.text("Delivered by",            pageW - 80, y + 17);
-  doc.text(COMPANY.name,              pageW - 80, y + 22);
+  doc.text("Delivered by",            pageW - 80, y + 25);
+  doc.text(COMPANY.name,              pageW - 80, y + 30);
+  doc.text(`Date: ${format(new Date(docData.date), "d MMMM yyyy")}`, pageW - 80, y + 35);
 
   addFooter(doc);
   return doc.output("arraybuffer");
