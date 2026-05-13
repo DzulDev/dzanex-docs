@@ -163,7 +163,7 @@ function addItemsTable(doc, items, y, showPrice) {
         if (!split) return;
         const cp = 3;
         // Erase the all-bold auto-render, preserve borders
-        doc.setFillColor(255, 255, 255);
+        doc.setFillColor(242, 242, 242);
         doc.rect(data.cell.x + 0.5, data.cell.y + 0.5, data.cell.width - 1, data.cell.height - 1, "F");
         const textX = data.cell.x + cp;
         const maxW  = data.cell.width - cp * 2;
