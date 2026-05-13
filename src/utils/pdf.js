@@ -147,7 +147,8 @@ function addItemsTable(doc, items, y, showPrice) {
       rowPageBreak:       "avoid",
       styles:             { fontSize: 9, cellPadding: 3 },
       headStyles:         { fillColor: TEAL, textColor: 255, fontStyle: "bold" },
-      bodyStyles:         { fillColor: [255, 255, 255] },
+      bodyStyles:         { fillColor: [242, 242, 242] },
+      alternateRowStyles: { fillColor: [242, 242, 242] },
       footStyles:         { textColor: [...BLACK] },
       columnStyles: {
         0: { cellWidth: 12, halign: "center" },
@@ -193,7 +194,8 @@ function addItemsTable(doc, items, y, showPrice) {
       body: rows,
       styles:             { fontSize: 9, cellPadding: 3 },
       headStyles:         { fillColor: TEAL, textColor: 255, fontStyle: "bold" },
-      bodyStyles:         { fillColor: [255, 255, 255] },
+      bodyStyles:         { fillColor: [242, 242, 242] },
+      alternateRowStyles: { fillColor: [242, 242, 242] },
       columnStyles: {
         0: { cellWidth: 12, halign: "center" },
         2: { cellWidth: 16, halign: "center" },
