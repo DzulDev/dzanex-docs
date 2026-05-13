@@ -371,13 +371,13 @@ export function generateInvoice(docData, logoDataUrl) {
   doc.setTextColor(...DARK);
   doc.text(COMPANY.bank,            M, y); y += 4;
   doc.text(COMPANY.bankAccountName, M, y); y += 4;
-  doc.text(COMPANY.bankAccount,     M, y);
-  // doc.setFont("helvetica", "italic"); // temporarily removed
-  // doc.setFontSize(8);
-  // doc.setTextColor(...GRAY);
-  // doc.text("Please make payment within 14 days of invoice date.", M, y);
+  doc.text(COMPANY.bankAccount,     M, y); y += 8;
+  doc.setFont("helvetica", "italic");
+  doc.setFontSize(8);
+  doc.setTextColor(...GRAY);
+  doc.text("Please make payment within 14 days of invoice date.", M, y);
 
-  // addSignature(doc, y + 8, "invoice"); // temporarily removed
+  addSignature(doc, y + 8, "invoice");
   addFooter(doc);
   return doc.output("arraybuffer");
 }
