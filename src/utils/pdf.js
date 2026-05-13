@@ -265,7 +265,7 @@ function addBankDetails(doc, y) {
   return y + 5;
 }
 
-function addSignature(doc, y, type, stampDataUrl) {
+function addSignature(doc, y, type, stampDataUrl, date) {
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
   const mid   = pageW / 2 + 5;
@@ -276,6 +276,7 @@ function addSignature(doc, y, type, stampDataUrl) {
 
   const leftEnd  = mid - 10;
   const rightEnd = pageW - M;
+  const dateStr  = date ? format(new Date(date), "d MMMM yyyy") : "";
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8.5);
@@ -288,11 +289,11 @@ function addSignature(doc, y, type, stampDataUrl) {
     doc.text("Issued by:", mid, y);
   }
 
-  // Stamp overlaid in signature space (right column)
+  // Stamp — 18mm, right-aligned in the company column
   if (stampDataUrl) {
-    const stampSize = 28;
-    const stampX = mid + (rightEnd - mid - stampSize) / 2;
-    doc.addImage(stampDataUrl, "PNG", stampX, y + 1, stampSize, stampSize);
+    const stampSize = 18;
+    const stampX = rightEnd - stampSize - 2;
+    doc.addImage(stampDataUrl, "PNG", stampX, y + 2, stampSize, stampSize);
   }
 
   y += 22; // signature space
@@ -326,7 +327,7 @@ function addSignature(doc, y, type, stampDataUrl) {
 
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...DARK);
-  doc.text("Date: _____________________", mid, y);
+  doc.text(`Date: ${dateStr}`, mid, y);
 
   return y + 8;
 }
@@ -354,7 +355,7 @@ export function generateQuotation(docData, logoDataUrl, stampDataUrl) {
   const { finalY, total } = addItemsTable(doc, docData.items, y, true);
   y = addTerms(doc, finalY + 10, total * 0.8, docData.paymentTerms, docData.terms);
   y = addBankDetails(doc, y);
-  addSignature(doc, y + 5, "quotation", stampDataUrl);
+  addSignature(doc, y + 5, "quotation", stampDataUrl, docData.date);
   addFooter(doc);
 
   return doc.output("arraybuffer");
@@ -385,7 +386,7 @@ export function generateInvoice(docData, logoDataUrl, stampDataUrl) {
   doc.setTextColor(...GRAY);
   doc.text("Please make payment within 14 days of invoice date.", M, y);
 
-  addSignature(doc, y + 8, "invoice", stampDataUrl);
+  addSignature(doc, y + 8, "invoice", stampDataUrl, docData.date);
   addFooter(doc);
   return doc.output("arraybuffer");
 }
