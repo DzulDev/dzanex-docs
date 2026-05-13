@@ -140,8 +140,8 @@ function addItemsTable(doc, items, y, showPrice) {
       head: [["No.", "Items & Descriptions", "Quantity", "Price", "Amount"]],
       body: rows,
       foot: [[
-        { content: "Total Amount", colSpan: 4, styles: { halign: "right", fontStyle: "bold", fillColor: [...LGRAY], textColor: [...BLACK] } },
-        { content: `RM ${total.toFixed(2)}`, styles: { fontStyle: "bold", fillColor: [...LGRAY], textColor: [...BLACK] } },
+        { content: "Total Amount", colSpan: 4, styles: { halign: "right", fontStyle: "bold", fillColor: [...MGRAY], textColor: [...BLACK] } },
+        { content: `RM ${total.toFixed(2)}`, styles: { fontStyle: "bold", fillColor: [...MGRAY], textColor: [...BLACK] } },
       ]],
       showFoot:           "lastPage",
       rowPageBreak:       "avoid",
