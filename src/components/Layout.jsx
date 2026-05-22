@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   FileText, Receipt, ShoppingCart, Truck,
-  LayoutDashboard, Settings, LogOut, Menu
+  LayoutDashboard, Settings, LogOut, Menu, Wallet
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { signOut } from "../utils/google";
@@ -13,6 +13,7 @@ const NAV = [
   { to: "/invoice", icon: Receipt, label: "Invoice" },
   { to: "/po", icon: ShoppingCart, label: "Purchase Order" },
   { to: "/do", icon: Truck, label: "Delivery Order" },
+  { to: "/pv", icon: Wallet, label: "Payment Voucher" },
   { to: "/settings", icon: Settings, label: "Settings" },
 ];
 

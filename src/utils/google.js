@@ -70,7 +70,7 @@ export async function ensureSheet(sheetId, token) {
 
 export async function createSpreadsheet(token) {
   const t = token || getToken();
-  const sheets = ["Quotation", "Invoice", "PO", "DO"].map((title) => ({
+  const sheets = ["Quotation", "Invoice", "PO", "DO", "PV"].map((title) => ({
     properties: { title },
   }));
   const body = {
@@ -94,6 +94,7 @@ const HEADERS = {
   Invoice:   ["Doc No", "Date", "Client", "Items", "Subtotal", "Tax", "Total", "Status", "Drive Link", "Notes", "_raw"],
   PO:        ["Doc No", "Date", "Supplier", "Items", "Subtotal", "Tax", "Total", "Status", "Drive Link", "Notes", "_raw"],
   DO:        ["Doc No", "Date", "Client", "Items", "Total Qty", "Status", "Drive Link", "Notes", "_raw"],
+  PV:        ["Doc No", "Date", "Paid To", "Purpose", "Amount", "Status", "Drive Link", "Notes", "_raw"],
 };
 
 export async function initSheetHeaders(sheetId, token) {
@@ -240,6 +241,35 @@ export async function getNextDocNumber(sheetId, sheetName, prefix, token) {
   );
   const seq = thisYear.length + 1;
   return `${prefix}-${year}-${String(seq).padStart(3, "0")}`;
+}
+
+export async function ensureSheetExists(sheetId, sheetName, token) {
+  const t = token || getToken();
+  try {
+    const res = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}?fields=sheets.properties.title`,
+      { headers: { Authorization: `Bearer ${t}` } }
+    );
+    const data = await res.json();
+    const exists = data.sheets?.some(s => s.properties.title === sheetName);
+    if (exists) return;
+    await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}:batchUpdate`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${t}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ requests: [{ addSheet: { properties: { title: sheetName } } }] }),
+    });
+    const headers = HEADERS[sheetName];
+    if (headers) {
+      await fetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${sheetName}!A1?valueInputOption=RAW`,
+        {
+          method: "PUT",
+          headers: { Authorization: `Bearer ${t}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ values: [headers] }),
+        }
+      );
+    }
+  } catch { /* skip */ }
 }
 
 // ── Drive ─────────────────────────────────────────────────────────────────────

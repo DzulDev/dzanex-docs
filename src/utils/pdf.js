@@ -421,6 +421,125 @@ export function generatePO(docData, logoDataUrl, stampDataUrl) {
   return doc.output("arraybuffer");
 }
 
+export function generatePaymentVoucher(docData, logoDataUrl, stampDataUrl) {
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const pageW = doc.internal.pageSize.getWidth();
+
+  let y = addHeader(doc, "Payment Voucher", docData.docNo, docData.date, logoDataUrl);
+
+  // Paid To + Date row
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(...BLACK);
+  doc.text("Paid To:", M, y);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(...DARK);
+  doc.text(`Date: ${format(new Date(docData.date), "d MMMM yyyy")}`, pageW - M, y, { align: "right" });
+  y += 6;
+
+  // Payee info box
+  const payeeLines = [
+    docData.paidTo?.name || "(Not specified)",
+    docData.paidTo?.bank      ? `Bank: ${docData.paidTo.bank}`              : null,
+    docData.paidTo?.accountNo ? `Account No: ${docData.paidTo.accountNo}`   : null,
+  ].filter(line => line !== null);
+  const boxH = 8 + payeeLines.length * 5;
+  doc.setFillColor(...LGRAY);
+  doc.roundedRect(M, y - 2, pageW - M * 2, boxH, 2, 2, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(...BLACK);
+  doc.text(payeeLines[0], M + 4, y + 5);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.5);
+  doc.setTextColor(...DARK);
+  payeeLines.slice(1).forEach((line, i) => {
+    doc.text(line, M + 4, y + 5 + (i + 1) * 5);
+  });
+  y += boxH + 8;
+
+  // Payment table
+  autoTable(doc, {
+    startY: y,
+    head: [["Description / Purpose", "Amount (RM)"]],
+    body: [[
+      docData.purpose || "",
+      { content: `RM ${parseFloat(docData.amount || 0).toFixed(2)}`, styles: { halign: "right", fontStyle: "bold" } },
+    ]],
+    foot: [[
+      { content: "Total Paid", styles: { halign: "right", fontStyle: "bold", fillColor: [...MGRAY], textColor: [...BLACK] } },
+      { content: `RM ${parseFloat(docData.amount || 0).toFixed(2)}`, styles: { halign: "right", fontStyle: "bold", fillColor: [...MGRAY], textColor: [...BLACK] } },
+    ]],
+    showFoot: "lastPage",
+    styles:     { fontSize: 9, cellPadding: 4 },
+    headStyles: { fillColor: TEAL, textColor: 255, fontStyle: "bold" },
+    bodyStyles: { fillColor: [255, 255, 255] },
+    columnStyles: { 1: { cellWidth: 45, halign: "right" } },
+    margin: { left: M, right: M },
+  });
+  y = doc.lastAutoTable.finalY + 8;
+
+  if (docData.reference?.trim()) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(...GRAY);
+    doc.text(`Transfer Reference: ${docData.reference}`, M, y);
+    y += 8;
+  }
+
+  if (docData.notes?.trim()) {
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(8);
+    doc.setTextColor(...GRAY);
+    doc.text(`Notes: ${docData.notes}`, M, y);
+    y += 8;
+  }
+
+  // Signature — company side only
+  const pageH = doc.internal.pageSize.getHeight();
+  if (y + 45 > pageH - 15) { doc.addPage(); y = 20; }
+
+  const sigStart = pageW - 80;
+  const rightEnd = pageW - M;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8.5);
+  doc.setTextColor(...BLACK);
+  doc.text("Prepared by:", sigStart, y);
+
+  if (stampDataUrl) {
+    const stampSize = 18;
+    const stampX = sigStart + (rightEnd - sigStart - stampSize) / 2;
+    doc.addImage(stampDataUrl, "PNG", stampX, y + 2, stampSize, stampSize);
+  }
+
+  y += 22;
+  doc.setDrawColor(...MGRAY);
+  doc.setLineWidth(0.4);
+  doc.line(sigStart, y, rightEnd, y);
+  y += 4;
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7.5);
+  doc.setTextColor(...GRAY);
+  doc.text("Signature & Stamp", sigStart, y);
+  y += 5;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7.5);
+  doc.setTextColor(...BLACK);
+  doc.text(COMPANY.name, sigStart, y);
+  y += 4;
+
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...DARK);
+  doc.text(`Date: ${format(new Date(docData.date), "d MMMM yyyy")}`, sigStart, y);
+
+  addFooter(doc);
+  return doc.output("arraybuffer");
+}
+
 export function generateDO(docData, logoDataUrl, stampDataUrl) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
 

@@ -4,6 +4,7 @@ import Layout from "./components/Layout";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import DocPage from "./pages/DocPage";
+import PaymentVoucherPage from "./pages/PaymentVoucherPage";
 import Settings from "./pages/Settings";
 import { generateQuotation, generateInvoice, generatePO, generateDO } from "./utils/pdf";
 import { getToken } from "./utils/google";
@@ -71,6 +72,7 @@ export default function App() {
                     showPrice={false} showTax={false} partyLabel="Client"
                     generateFn={generateDO} />
                 } />
+                <Route path="pv" element={<PaymentVoucherPage />} />
                 <Route path="settings" element={<Settings />} />
               </Routes>
             </Layout>

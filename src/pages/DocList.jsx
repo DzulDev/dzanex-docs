@@ -9,6 +9,7 @@ const STATUS_OPTIONS = {
   Invoice:   ["Pending", "Paid", "Overdue"],
   PO:        ["Pending", "Received", "Cancelled"],
   DO:        ["Pending", "Delivered", "Cancelled"],
+  PV:        ["Pending", "Paid", "Cancelled"],
 };
 
 const STATUS_COL = {
@@ -16,6 +17,7 @@ const STATUS_COL = {
   Invoice:   "H",
   PO:        "H",
   DO:        "F",
+  PV:        "F",
 };
 
 const CONVERT_OPTIONS = {
@@ -260,9 +262,10 @@ export default function DocList({ sheetName, title }) {
           {/* ── Mobile card view (hidden on md+) ─────────────────────────── */}
           <div className="md:hidden space-y-3">
             {rows.map((row, i) => {
-              const party  = row["Client"] || row["Supplier"] || "";
+              const party  = row["Client"] || row["Supplier"] || row["Paid To"] || "";
               const amount = row["Total"]     ? `MYR ${row["Total"]}`
                            : row["Total Qty"] ? `Qty: ${row["Total Qty"]}`
+                           : row["Amount"]    ? `MYR ${row["Amount"]}`
                            : "";
               const items  = row["Items"] || "";
               const truncated = items.length > 50 ? items.slice(0, 50) + "…" : items;
