@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileText, Receipt, ShoppingCart, Truck, RefreshCw, TrendingUp, Wallet } from "lucide-react";
+import { FileText, Receipt, ShoppingCart, Truck, RefreshCw, TrendingUp, Wallet, FileCheck } from "lucide-react";
 import { getConfig } from "../utils/storage";
 import { getRows, getToken } from "../utils/google";
 
@@ -10,6 +10,7 @@ const DOC_TYPES = [
   { key: "PO",        label: "Purchase Order",   icon: ShoppingCart, path: "/po",        statuses: ["Pending", "Received", "Cancelled"] },
   { key: "DO",        label: "Delivery Order",   icon: Truck,        path: "/do",        statuses: ["Pending", "Delivered", "Cancelled"] },
   { key: "PV",        label: "Payment Voucher",  icon: Wallet,       path: "/pv",        statuses: ["Pending", "Paid", "Cancelled"] },
+  { key: "Receipt",   label: "Receipt",          icon: FileCheck,    path: "/receipt",   statuses: ["Issued", "Voided"] },
 ];
 
 const STATUS_DOT = {
@@ -21,6 +22,8 @@ const STATUS_DOT = {
   Rejected:  "bg-red-400",
   Overdue:   "bg-orange-400",
   Cancelled: "bg-gray-300",
+  Issued:    "bg-blue-500",
+  Voided:    "bg-gray-300",
 };
 
 const STATUS_TEXT = {
@@ -32,6 +35,8 @@ const STATUS_TEXT = {
   Rejected:  "text-red-600",
   Overdue:   "text-orange-600",
   Cancelled: "text-gray-400",
+  Issued:    "text-blue-700",
+  Voided:    "text-gray-400",
 };
 
 function fmtDate(d) {
@@ -56,14 +61,15 @@ export default function Dashboard() {
     const token = getToken();
     if (!sheetId || !token) { setLoading(false); return; }
     try {
-      const [qt, inv, po, doRows, pv] = await Promise.all([
+      const [qt, inv, po, doRows, pv, rec] = await Promise.all([
         getRows(sheetId, "Quotation", token),
         getRows(sheetId, "Invoice",   token),
         getRows(sheetId, "PO",        token),
         getRows(sheetId, "DO",        token),
         getRows(sheetId, "PV",        token),
+        getRows(sheetId, "Receipt",   token),
       ]);
-      setAllData({ Quotation: qt, Invoice: inv, PO: po, DO: doRows, PV: pv });
+      setAllData({ Quotation: qt, Invoice: inv, PO: po, DO: doRows, PV: pv, Receipt: rec });
     } catch (e) {
       console.error(e);
       if (e.httpStatus === 401) navigate("/login");
@@ -94,6 +100,7 @@ export default function Dashboard() {
     PO:        statusCounts(allData.PO),
     DO:        statusCounts(allData.DO),
     PV:        statusCounts(allData.PV),
+    Receipt:   statusCounts(allData.Receipt),
   };
 
   // Financial metrics
@@ -151,6 +158,7 @@ export default function Dashboard() {
     ...allData.PO.map(r =>        ({ ...r, _type: "PO",  _party: r.Supplier, _amt: r.Total })),
     ...allData.DO.map(r =>        ({ ...r, _type: "DO",  _party: r.Client,   _amt: null })),
     ...allData.PV.map(r =>        ({ ...r, _type: "PV",  _party: r["Paid To"], _amt: r.Amount })),
+    ...allData.Receipt.map(r =>   ({ ...r, _type: "REC", _party: r.Client,     _amt: r.Amount })),
   ].sort((a, b) => new Date(b.Date) - new Date(a.Date)).slice(0, 5);
 
   return (
@@ -215,7 +223,7 @@ export default function Dashboard() {
             <button
               key={key}
               onClick={() => navigate(path)}
-              className={`bg-white rounded-xl border border-gray-200 p-4 text-left hover:shadow-md transition-shadow ${idx === 4 ? "col-span-2" : ""}`}
+              className="bg-white rounded-xl border border-gray-200 p-4 text-left hover:shadow-md transition-shadow"
             >
               {/* Doc type header */}
               <div className="flex items-center justify-between mb-3">
