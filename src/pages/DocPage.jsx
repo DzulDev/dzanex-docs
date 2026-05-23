@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import DocForm from "../components/DocForm";
 import DocList from "./DocList";
 import { getConfig } from "../utils/storage";
-import { getToken, getNextDocNumber, appendRow, ensureDriveFolder, uploadPDF, ensureRawColumn, ensureSheetExists, ensureSupplierInvoiceCol, ensurePaymentProofCol } from "../utils/google";
+import { getToken, getNextDocNumber, appendRow, ensureDriveFolder, uploadPDF, ensureRawColumn, ensureSheetExists, ensureSupplierInvoiceCol, ensureDepositBalanceCol } from "../utils/google";
 import { showToast } from "../utils/toast";
 
 export default function DocPage({ title, prefix, sheetName, showPrice, showTax, showValidUntil, partyLabel, generateFn }) {
@@ -27,9 +27,9 @@ export default function DocPage({ title, prefix, sheetName, showPrice, showTax, 
       ensureRawColumn(sheetId, token); // fire-and-forget — adds _raw header to existing sheets
       // Chain sequentially — PP migration must run after SI so column positions are correct
       if (sheetName === "PO") {
-        ensureSupplierInvoiceCol(sheetId, token).then(() => ensurePaymentProofCol(sheetId, sheetName, token));
+        ensureSupplierInvoiceCol(sheetId, token).then(() => ensureDepositBalanceCol(sheetId, sheetName, token));
       } else if (sheetName === "Invoice") {
-        ensurePaymentProofCol(sheetId, sheetName, token);
+        ensureDepositBalanceCol(sheetId, sheetName, token);
       }
       try {
         const no = await getNextDocNumber(sheetId, sheetName, prefix, token);
@@ -81,11 +81,11 @@ export default function DocPage({ title, prefix, sheetName, showPrice, showTax, 
         : sheetName === "PO"
         ? [formData.docNo, formData.date, formData.to.name, itemsSummary,
            subtotal.toFixed(2), tax.toFixed(2), total.toFixed(2),
-           "Pending", driveLink, formData.notes, "", "", rawJson]  // "" = Supplier Invoice, "" = Payment Proof
+           "Pending", driveLink, formData.notes, "", "", "", rawJson]  // SI + Deposit Proof + Balance Proof
         : sheetName === "Invoice"
         ? [formData.docNo, formData.date, formData.to.name, itemsSummary,
            subtotal.toFixed(2), tax.toFixed(2), total.toFixed(2),
-           "Pending", driveLink, formData.notes, "", rawJson]      // "" = Payment Proof
+           "Pending", driveLink, formData.notes, "", "", rawJson]      // Deposit Proof + Balance Proof
         : [formData.docNo, formData.date, formData.to.name, itemsSummary,
            subtotal.toFixed(2), tax.toFixed(2), total.toFixed(2),
            "Pending", driveLink, formData.notes, rawJson];

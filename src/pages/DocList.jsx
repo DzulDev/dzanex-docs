@@ -11,7 +11,7 @@ const PAYMENT_METHODS = ["Bank Transfer", "Cash", "Cheque", "Online Transfer", "
 const STATUS_OPTIONS = {
   Quotation:  ["Pending", "Accepted", "Rejected"],
   Invoice:    ["Pending", "Paid", "Overdue"],
-  PO:         ["Pending", "Paid", "Received", "Cancelled"],
+  PO:         ["Pending", "Deposit Paid", "Paid", "Received", "Cancelled"],
   DO:         ["Pending", "Delivered", "Cancelled"],
   PV:         ["Pending", "Paid", "Cancelled"],
   CreditNote: ["Pending", "Applied", "Voided"],
@@ -72,31 +72,33 @@ const CONVERT_OPTIONS = {
 };
 
 const STATUS_STYLE = {
-  Pending:   "bg-yellow-50 text-yellow-700 border-yellow-200",
-  Accepted:  "bg-green-50  text-green-700  border-green-200",
-  Paid:      "bg-green-50  text-green-700  border-green-200",
-  Applied:   "bg-green-50  text-green-700  border-green-200",
-  Received:  "bg-blue-50   text-blue-700   border-blue-200",
-  Delivered: "bg-blue-50   text-blue-700   border-blue-200",
-  Issued:    "bg-blue-50   text-blue-700   border-blue-200",
-  Rejected:  "bg-red-50    text-red-600    border-red-200",
-  Overdue:   "bg-orange-50 text-orange-600 border-orange-200",
-  Cancelled: "bg-gray-50   text-gray-500   border-gray-200",
-  Voided:    "bg-gray-50   text-gray-500   border-gray-200",
+  Pending:      "bg-yellow-50 text-yellow-700 border-yellow-200",
+  Accepted:     "bg-green-50  text-green-700  border-green-200",
+  Paid:         "bg-green-50  text-green-700  border-green-200",
+  Applied:      "bg-green-50  text-green-700  border-green-200",
+  "Deposit Paid": "bg-cyan-50   text-cyan-700   border-cyan-200",
+  Received:     "bg-blue-50   text-blue-700   border-blue-200",
+  Delivered:    "bg-blue-50   text-blue-700   border-blue-200",
+  Issued:       "bg-blue-50   text-blue-700   border-blue-200",
+  Rejected:     "bg-red-50    text-red-600    border-red-200",
+  Overdue:      "bg-orange-50 text-orange-600 border-orange-200",
+  Cancelled:    "bg-gray-50   text-gray-500   border-gray-200",
+  Voided:       "bg-gray-50   text-gray-500   border-gray-200",
 };
 
 const STATUS_DOT = {
-  Pending:   "bg-yellow-400",
-  Accepted:  "bg-green-500",
-  Paid:      "bg-green-500",
-  Applied:   "bg-green-500",
-  Received:  "bg-blue-500",
-  Delivered: "bg-blue-500",
-  Issued:    "bg-blue-500",
-  Rejected:  "bg-red-400",
-  Overdue:   "bg-orange-400",
-  Cancelled: "bg-gray-300",
-  Voided:    "bg-gray-300",
+  Pending:      "bg-yellow-400",
+  Accepted:     "bg-green-500",
+  Paid:         "bg-green-500",
+  Applied:      "bg-green-500",
+  "Deposit Paid": "bg-cyan-500",
+  Received:     "bg-blue-500",
+  Delivered:    "bg-blue-500",
+  Issued:       "bg-blue-500",
+  Rejected:     "bg-red-400",
+  Overdue:      "bg-orange-400",
+  Cancelled:    "bg-gray-300",
+  Voided:       "bg-gray-300",
 };
 
 async function autoCreateReceipt(row, paymentMethod, reference, date) {
@@ -334,7 +336,7 @@ export default function DocList({ sheetName, title }) {
   );
 
   const headers = rows[0]
-    ? Object.keys(rows[0]).filter(h => h !== "Drive Link" && h !== "Supplier Invoice" && h !== "Payment Proof" && !h.startsWith("_"))
+    ? Object.keys(rows[0]).filter(h => h !== "Drive Link" && h !== "Supplier Invoice" && h !== "Payment Proof" && h !== "Deposit Proof" && h !== "Balance Proof" && !h.startsWith("_"))
     : [];
 
   const activeStatusRow  = rows.find(r => r._rowNum === openStatus);
@@ -568,17 +570,32 @@ export default function DocList({ sheetName, title }) {
                       )
                     )}
                     {(sheetName === "PO" || sheetName === "Invoice") && (
-                      isDriveUrl(row["Payment Proof"]) ? (
-                        <a href={row["Payment Proof"]} target="_blank" rel="noreferrer"
+                      isDriveUrl(row["Deposit Proof"]) ? (
+                        <a href={row["Deposit Proof"]} target="_blank" rel="noreferrer"
                           className="inline-flex items-center justify-center gap-1 text-xs font-medium py-2 px-2.5 rounded-lg border border-green-200 text-green-600 hover:bg-green-50 transition-colors"
-                          title="View payment proof">
-                          <Paperclip size={11} /> PP
+                          title="View deposit proof">
+                          <Paperclip size={11} /> Dep
                         </a>
                       ) : (
-                        <label className={`inline-flex items-center justify-center gap-1 text-xs py-2 px-2.5 rounded-lg border border-dashed border-gray-300 text-gray-400 hover:border-green-300 hover:text-green-500 transition-colors cursor-pointer ${uploading ? "opacity-50 pointer-events-none" : ""}`} title="Attach payment proof">
+                        <label className={`inline-flex items-center justify-center gap-1 text-xs py-2 px-2.5 rounded-lg border border-dashed border-gray-300 text-gray-400 hover:border-green-300 hover:text-green-500 transition-colors cursor-pointer ${uploading ? "opacity-50 pointer-events-none" : ""}`} title="Attach deposit proof">
                           <input type="file" accept=".pdf,application/pdf,image/*" className="hidden"
-                            onChange={e => { if (e.target.files?.[0]) handleAttachUpload(row, e.target.files[0], "Payment Proof", "Payment Proof"); e.target.value = ""; }} />
-                          {uploading === `${row._rowNum}-Payment Proof` ? <Loader2 size={11} className="animate-spin" /> : <Paperclip size={11} />}
+                            onChange={e => { if (e.target.files?.[0]) handleAttachUpload(row, e.target.files[0], "Deposit Proof", "Deposit Proof"); e.target.value = ""; }} />
+                          {uploading === `${row._rowNum}-Deposit Proof` ? <Loader2 size={11} className="animate-spin" /> : <Paperclip size={11} />}
+                        </label>
+                      )
+                    )}
+                    {(sheetName === "PO" || sheetName === "Invoice") && (
+                      isDriveUrl(row["Balance Proof"]) ? (
+                        <a href={row["Balance Proof"]} target="_blank" rel="noreferrer"
+                          className="inline-flex items-center justify-center gap-1 text-xs font-medium py-2 px-2.5 rounded-lg border border-teal-200 text-teal-600 hover:bg-teal-50 transition-colors"
+                          title="View balance proof">
+                          <Paperclip size={11} /> Bal
+                        </a>
+                      ) : (
+                        <label className={`inline-flex items-center justify-center gap-1 text-xs py-2 px-2.5 rounded-lg border border-dashed border-gray-300 text-gray-400 hover:border-teal-300 hover:text-teal-500 transition-colors cursor-pointer ${uploading ? "opacity-50 pointer-events-none" : ""}`} title="Attach balance proof">
+                          <input type="file" accept=".pdf,application/pdf,image/*" className="hidden"
+                            onChange={e => { if (e.target.files?.[0]) handleAttachUpload(row, e.target.files[0], "Balance Proof", "Balance Proof"); e.target.value = ""; }} />
+                          {uploading === `${row._rowNum}-Balance Proof` ? <Loader2 size={11} className="animate-spin" /> : <Paperclip size={11} />}
                         </label>
                       )
                     )}
@@ -632,7 +649,8 @@ export default function DocList({ sheetName, title }) {
                     ))}
                     <th className="px-4 py-3 text-left">PDF</th>
                     {sheetName === "PO" && <th className="px-4 py-3 text-left">Supplier Inv.</th>}
-                    {(sheetName === "PO" || sheetName === "Invoice") && <th className="px-4 py-3 text-left">Payment Proof</th>}
+                    {(sheetName === "PO" || sheetName === "Invoice") && <th className="px-4 py-3 text-left">Deposit</th>}
+                    {(sheetName === "PO" || sheetName === "Invoice") && <th className="px-4 py-3 text-left">Balance</th>}
                     {convertOptions.length > 0 && <th className="px-4 py-3 text-left">Convert</th>}
                     <th className="px-4 py-3"></th>
                   </tr>
@@ -680,16 +698,32 @@ export default function DocList({ sheetName, title }) {
                       )}
                       {(sheetName === "PO" || sheetName === "Invoice") && (
                         <td className="px-4 py-3">
-                          {isDriveUrl(row["Payment Proof"]) ? (
-                            <a href={row["Payment Proof"]} target="_blank" rel="noreferrer"
+                          {isDriveUrl(row["Deposit Proof"]) ? (
+                            <a href={row["Deposit Proof"]} target="_blank" rel="noreferrer"
                               className="inline-flex items-center gap-1 text-xs font-medium text-green-600 hover:text-green-800 transition-colors">
                               <Paperclip size={12} /> View
                             </a>
                           ) : (
-                            <label className={`inline-flex items-center gap-1 text-xs text-gray-400 hover:text-green-500 transition-colors cursor-pointer ${uploading ? "opacity-50 pointer-events-none" : ""}`} title="Attach payment proof">
+                            <label className={`inline-flex items-center gap-1 text-xs text-gray-400 hover:text-green-500 transition-colors cursor-pointer ${uploading ? "opacity-50 pointer-events-none" : ""}`} title="Attach deposit proof">
                               <input type="file" accept=".pdf,application/pdf,image/*" className="hidden"
-                                onChange={e => { if (e.target.files?.[0]) handleAttachUpload(row, e.target.files[0], "Payment Proof", "Payment Proof"); e.target.value = ""; }} />
-                              {uploading === `${row._rowNum}-Payment Proof` ? <Loader2 size={12} className="animate-spin" /> : <><Paperclip size={12} /> Attach</>}
+                                onChange={e => { if (e.target.files?.[0]) handleAttachUpload(row, e.target.files[0], "Deposit Proof", "Deposit Proof"); e.target.value = ""; }} />
+                              {uploading === `${row._rowNum}-Deposit Proof` ? <Loader2 size={12} className="animate-spin" /> : <><Paperclip size={12} /> Attach</>}
+                            </label>
+                          )}
+                        </td>
+                      )}
+                      {(sheetName === "PO" || sheetName === "Invoice") && (
+                        <td className="px-4 py-3">
+                          {isDriveUrl(row["Balance Proof"]) ? (
+                            <a href={row["Balance Proof"]} target="_blank" rel="noreferrer"
+                              className="inline-flex items-center gap-1 text-xs font-medium text-teal-600 hover:text-teal-800 transition-colors">
+                              <Paperclip size={12} /> View
+                            </a>
+                          ) : (
+                            <label className={`inline-flex items-center gap-1 text-xs text-gray-400 hover:text-teal-500 transition-colors cursor-pointer ${uploading ? "opacity-50 pointer-events-none" : ""}`} title="Attach balance proof">
+                              <input type="file" accept=".pdf,application/pdf,image/*" className="hidden"
+                                onChange={e => { if (e.target.files?.[0]) handleAttachUpload(row, e.target.files[0], "Balance Proof", "Balance Proof"); e.target.value = ""; }} />
+                              {uploading === `${row._rowNum}-Balance Proof` ? <Loader2 size={12} className="animate-spin" /> : <><Paperclip size={12} /> Attach</>}
                             </label>
                           )}
                         </td>
