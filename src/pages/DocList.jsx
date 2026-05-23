@@ -458,7 +458,7 @@ export default function DocList({ sheetName, title }) {
       <input
         ref={fileInputRef}
         type="file"
-        accept=".pdf,application/pdf"
+        accept=".pdf,application/pdf,image/*"
         className="hidden"
         onChange={e => {
           if (e.target.files?.[0] && uploadTarget)
