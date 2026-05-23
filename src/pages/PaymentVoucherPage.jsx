@@ -5,7 +5,7 @@ import DocList from "./DocList";
 import { getConfig } from "../utils/storage";
 import {
   getToken, getNextDocNumber, appendRow,
-  ensureDriveFolder, uploadPDF, ensureSheetExists,
+  ensureDriveFolder, uploadPDF, ensureSheetExists, ensurePVAttachmentCols,
 } from "../utils/google";
 import { generatePaymentVoucher } from "../utils/pdf";
 import { showToast } from "../utils/toast";
@@ -39,6 +39,7 @@ export default function PaymentVoucherPage() {
       if (!sheetId || !token) { navigate("/login"); return; }
       try {
         await ensureSheetExists(sheetId, "PV", token);
+        ensurePVAttachmentCols(sheetId, token); // fire-and-forget migration
         const no = await getNextDocNumber(sheetId, "PV", "PV", token);
         setDocNo(no);
       } catch (e) {
@@ -77,7 +78,7 @@ export default function PaymentVoucherPage() {
       await appendRow(sheetId, "PV", [
         docNo, form.date, form.paidTo.name, form.purpose,
         parseFloat(form.amount || 0).toFixed(2),
-        "Pending", driveLink, form.notes, rawJson,
+        "Pending", driveLink, form.notes, "", "", rawJson, // Receipt/Invoice + Payment Proof
       ], token);
 
       localStorage.setItem(`dzanex_doc_${docNo}`, rawJson);
