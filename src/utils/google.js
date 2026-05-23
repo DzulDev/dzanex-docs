@@ -235,6 +235,17 @@ export async function deleteDriveFile(driveLink, token) {
   if (!res.ok) await guardFetch(res, "deleteDriveFile");
 }
 
+export async function getColLetter(sheetId, sheetName, header, token) {
+  const t = token || getToken();
+  const res = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${sheetName}!1:1`,
+    { headers: { Authorization: `Bearer ${t}` } }
+  );
+  const data = await res.json();
+  const idx = (data.values?.[0] || []).indexOf(header);
+  return idx >= 0 ? String.fromCharCode(65 + idx) : null;
+}
+
 export async function getNextDocNumber(sheetId, sheetName, prefix, token) {
   const rows = await getRows(sheetId, sheetName, token);
   const year = new Date().getFullYear();

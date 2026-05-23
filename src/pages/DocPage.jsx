@@ -59,7 +59,8 @@ export default function DocPage({ title, prefix, sheetName, showPrice, showTax, 
     setSaving(true);
     try {
       const rootId = driveFolderId;
-      const folderId = await ensureDriveFolder(formData.to.name || sheetName, rootId, token);
+      const typeFolderId = await ensureDriveFolder(sheetName, rootId, token);
+      const folderId = await ensureDriveFolder(formData.to.name || "Unknown", typeFolderId, token);
 
       const filename = `${formData.docNo} - ${formData.to.name || "Unknown"}.pdf`;
       const driveLink = await uploadPDF(pdfBytes, filename, folderId, token) || "";

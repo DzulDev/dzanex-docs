@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getConfig } from "../utils/storage";
-import { getRows, updateCell, getToken, getSheetGid, deleteSheetRow, deleteDriveFile, appendRow, ensureDriveFolder, uploadPDF, ensureSheetExists, uploadFile } from "../utils/google";
+import { getRows, updateCell, getToken, getSheetGid, deleteSheetRow, deleteDriveFile, appendRow, ensureDriveFolder, uploadPDF, ensureSheetExists, uploadFile, getColLetter } from "../utils/google";
 import { generateReceipt, generateDO } from "../utils/pdf";
 import { showToast } from "../utils/toast";
 import { ChevronDown, ExternalLink, FileText, Loader2, Paperclip, RefreshCw, Trash2, Receipt } from "lucide-react";
@@ -53,9 +53,8 @@ function poToPVPrefill(prefill, row) {
   };
 }
 
-// Column letters stay in sync with HEADERS in google.js
-const SUPPLIER_INV_COL  = "K"; // PO: index 10
-const PAYMENT_PROOF_COL = { PO: "L", Invoice: "K" }; // PO: index 11, Invoice: index 10
+// Only show attachment link if value is actually a Drive URL (guards against column misalignment noise)
+const isDriveUrl = (v) => typeof v === "string" && v.startsWith("https://");
 
 const CONVERT_OPTIONS = {
   Quotation: [
@@ -288,18 +287,21 @@ export default function DocList({ sheetName, title }) {
     navigate(opt.path, { state: { prefill: transformed } });
   }
 
-  // Generic attachment uploader — field is the sheet column header, col is the letter, label is display text
-  async function handleAttachUpload(row, file, field, col, label) {
+  // Generic attachment uploader — looks up the actual column letter dynamically to avoid hardcoded position issues
+  async function handleAttachUpload(row, file, field, label) {
     const { sheetId, driveFolderId } = getConfig();
     const token = getToken();
     if (!sheetId || !token || !file) return;
     setUploading(`${row._rowNum}-${field}`);
     try {
       const party = row["Client"] || row["Supplier"] || "Unknown";
-      const folderId = await ensureDriveFolder(party, driveFolderId, token);
+      const typeFolderId = await ensureDriveFolder(sheetName, driveFolderId, token);
+      const folderId = await ensureDriveFolder(party, typeFolderId, token);
       const bytes = await file.arrayBuffer();
       const filename = `[${label}] ${row["Doc No"]} - ${party}.pdf`;
       const link = await uploadFile(bytes, filename, file.type || "application/pdf", folderId, token);
+      const col = await getColLetter(sheetId, sheetName, field, token);
+      if (!col) throw new Error(`Column "${field}" not found in sheet`);
       await updateCell(sheetId, sheetName, row._rowNum, col, link, token);
       setRows(prev => prev.map(r => r._rowNum === row._rowNum ? { ...r, [field]: link } : r));
       showToast(`${label} uploaded`);
@@ -551,7 +553,7 @@ export default function DocList({ sheetName, title }) {
                       </div>
                     )}
                     {sheetName === "PO" && (
-                      row["Supplier Invoice"] ? (
+                      isDriveUrl(row["Supplier Invoice"]) ? (
                         <a href={row["Supplier Invoice"]} target="_blank" rel="noreferrer"
                           className="inline-flex items-center justify-center gap-1 text-xs font-medium py-2 px-2.5 rounded-lg border border-orange-200 text-orange-600 hover:bg-orange-50 transition-colors"
                           title="View supplier invoice">
@@ -560,13 +562,13 @@ export default function DocList({ sheetName, title }) {
                       ) : (
                         <label className={`inline-flex items-center justify-center gap-1 text-xs py-2 px-2.5 rounded-lg border border-dashed border-gray-300 text-gray-400 hover:border-orange-300 hover:text-orange-500 transition-colors cursor-pointer ${uploading ? "opacity-50 pointer-events-none" : ""}`} title="Attach supplier invoice">
                           <input type="file" accept=".pdf,application/pdf,image/*" className="hidden"
-                            onChange={e => { if (e.target.files?.[0]) handleAttachUpload(row, e.target.files[0], "Supplier Invoice", SUPPLIER_INV_COL, "Supplier Invoice"); e.target.value = ""; }} />
+                            onChange={e => { if (e.target.files?.[0]) handleAttachUpload(row, e.target.files[0], "Supplier Invoice", "Supplier Invoice"); e.target.value = ""; }} />
                           {uploading === `${row._rowNum}-Supplier Invoice` ? <Loader2 size={11} className="animate-spin" /> : <Paperclip size={11} />}
                         </label>
                       )
                     )}
                     {(sheetName === "PO" || sheetName === "Invoice") && (
-                      row["Payment Proof"] ? (
+                      isDriveUrl(row["Payment Proof"]) ? (
                         <a href={row["Payment Proof"]} target="_blank" rel="noreferrer"
                           className="inline-flex items-center justify-center gap-1 text-xs font-medium py-2 px-2.5 rounded-lg border border-green-200 text-green-600 hover:bg-green-50 transition-colors"
                           title="View payment proof">
@@ -575,7 +577,7 @@ export default function DocList({ sheetName, title }) {
                       ) : (
                         <label className={`inline-flex items-center justify-center gap-1 text-xs py-2 px-2.5 rounded-lg border border-dashed border-gray-300 text-gray-400 hover:border-green-300 hover:text-green-500 transition-colors cursor-pointer ${uploading ? "opacity-50 pointer-events-none" : ""}`} title="Attach payment proof">
                           <input type="file" accept=".pdf,application/pdf,image/*" className="hidden"
-                            onChange={e => { if (e.target.files?.[0]) handleAttachUpload(row, e.target.files[0], "Payment Proof", PAYMENT_PROOF_COL[sheetName], "Payment Proof"); e.target.value = ""; }} />
+                            onChange={e => { if (e.target.files?.[0]) handleAttachUpload(row, e.target.files[0], "Payment Proof", "Payment Proof"); e.target.value = ""; }} />
                           {uploading === `${row._rowNum}-Payment Proof` ? <Loader2 size={11} className="animate-spin" /> : <Paperclip size={11} />}
                         </label>
                       )
@@ -662,7 +664,7 @@ export default function DocList({ sheetName, title }) {
                       </td>
                       {sheetName === "PO" && (
                         <td className="px-4 py-3">
-                          {row["Supplier Invoice"] ? (
+                          {isDriveUrl(row["Supplier Invoice"]) ? (
                             <a href={row["Supplier Invoice"]} target="_blank" rel="noreferrer"
                               className="inline-flex items-center gap-1 text-xs font-medium text-orange-600 hover:text-orange-800 transition-colors">
                               <Paperclip size={12} /> View
@@ -670,7 +672,7 @@ export default function DocList({ sheetName, title }) {
                           ) : (
                             <label className={`inline-flex items-center gap-1 text-xs text-gray-400 hover:text-orange-500 transition-colors cursor-pointer ${uploading ? "opacity-50 pointer-events-none" : ""}`} title="Attach supplier invoice">
                               <input type="file" accept=".pdf,application/pdf,image/*" className="hidden"
-                                onChange={e => { if (e.target.files?.[0]) handleAttachUpload(row, e.target.files[0], "Supplier Invoice", SUPPLIER_INV_COL, "Supplier Invoice"); e.target.value = ""; }} />
+                                onChange={e => { if (e.target.files?.[0]) handleAttachUpload(row, e.target.files[0], "Supplier Invoice", "Supplier Invoice"); e.target.value = ""; }} />
                               {uploading === `${row._rowNum}-Supplier Invoice` ? <Loader2 size={12} className="animate-spin" /> : <><Paperclip size={12} /> Attach</>}
                             </label>
                           )}
@@ -678,7 +680,7 @@ export default function DocList({ sheetName, title }) {
                       )}
                       {(sheetName === "PO" || sheetName === "Invoice") && (
                         <td className="px-4 py-3">
-                          {row["Payment Proof"] ? (
+                          {isDriveUrl(row["Payment Proof"]) ? (
                             <a href={row["Payment Proof"]} target="_blank" rel="noreferrer"
                               className="inline-flex items-center gap-1 text-xs font-medium text-green-600 hover:text-green-800 transition-colors">
                               <Paperclip size={12} /> View
@@ -686,7 +688,7 @@ export default function DocList({ sheetName, title }) {
                           ) : (
                             <label className={`inline-flex items-center gap-1 text-xs text-gray-400 hover:text-green-500 transition-colors cursor-pointer ${uploading ? "opacity-50 pointer-events-none" : ""}`} title="Attach payment proof">
                               <input type="file" accept=".pdf,application/pdf,image/*" className="hidden"
-                                onChange={e => { if (e.target.files?.[0]) handleAttachUpload(row, e.target.files[0], "Payment Proof", PAYMENT_PROOF_COL[sheetName], "Payment Proof"); e.target.value = ""; }} />
+                                onChange={e => { if (e.target.files?.[0]) handleAttachUpload(row, e.target.files[0], "Payment Proof", "Payment Proof"); e.target.value = ""; }} />
                               {uploading === `${row._rowNum}-Payment Proof` ? <Loader2 size={12} className="animate-spin" /> : <><Paperclip size={12} /> Attach</>}
                             </label>
                           )}
