@@ -3,12 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { RefreshCw, Printer } from "lucide-react";
 import { getConfig } from "../utils/storage";
 import { getRows, getToken } from "../utils/google";
+import { fmtMYR } from "../utils/fmt";
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-
-function fmtMYR(n) {
-  return `MYR ${Number(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
-}
 
 function monthLabel(ym) {
   const [, m] = ym.split("-");

@@ -13,6 +13,11 @@ const MGRAY = [209, 213, 219];
 
 const M = 14;
 
+// Formats a number to "RM 1,234.56" for use in PDF cells
+function rm(n) {
+  return `RM ${Number(n || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
+}
+
 function addHeader(doc, title, docNo, date, logoDataUrl) {
   const pageW = doc.internal.pageSize.getWidth();
 
@@ -141,8 +146,8 @@ function addItemsTable(doc, items, y, showPrice) {
         i + 1,
         { content: desc, styles: descStyles },
         qtyDisplay,
-        `RM ${price.toFixed(2)}`,
-        `RM ${(qty * price).toFixed(2)}`,
+        rm(price),
+        rm(qty * price),
       ];
     });
 
@@ -152,7 +157,7 @@ function addItemsTable(doc, items, y, showPrice) {
       body: rows,
       foot: [[
         { content: "Total Amount", colSpan: 4, styles: { halign: "right", fontStyle: "bold", fillColor: [...MGRAY], textColor: [...BLACK] } },
-        { content: `RM ${total.toFixed(2)}`, styles: { fontStyle: "bold", fillColor: [...MGRAY], textColor: [...BLACK] } },
+        { content: rm(total), styles: { fontStyle: "bold", fillColor: [...MGRAY], textColor: [...BLACK] } },
       ]],
       showFoot:           "lastPage",
       rowPageBreak:       "avoid",
@@ -476,11 +481,11 @@ export function generatePaymentVoucher(docData, logoDataUrl, stampDataUrl) {
     head: [["Description / Purpose", "Amount (RM)"]],
     body: [[
       docData.purpose || "",
-      { content: `RM ${parseFloat(docData.amount || 0).toFixed(2)}`, styles: { halign: "right", fontStyle: "bold" } },
+      { content: rm(docData.amount), styles: { halign: "right", fontStyle: "bold" } },
     ]],
     foot: [[
       { content: "Total Paid", styles: { halign: "right", fontStyle: "bold", fillColor: [...MGRAY], textColor: [...BLACK] } },
-      { content: `RM ${parseFloat(docData.amount || 0).toFixed(2)}`, styles: { halign: "right", fontStyle: "bold", fillColor: [...MGRAY], textColor: [...BLACK] } },
+      { content: rm(docData.amount), styles: { halign: "right", fontStyle: "bold", fillColor: [...MGRAY], textColor: [...BLACK] } },
     ]],
     showFoot: "lastPage",
     styles:     { fontSize: 9, cellPadding: 4 },
@@ -619,11 +624,11 @@ export function generateReceipt(docData, logoDataUrl, stampDataUrl) {
     head: [["Description", "Amount (RM)"]],
     body: [[
       desc,
-      { content: `RM ${parseFloat(docData.amount || 0).toFixed(2)}`, styles: { halign: "right", fontStyle: "bold" } },
+      { content: rm(docData.amount), styles: { halign: "right", fontStyle: "bold" } },
     ]],
     foot: [[
       { content: "Total Received", styles: { halign: "right", fontStyle: "bold", fillColor: [...MGRAY], textColor: [...BLACK] } },
-      { content: `RM ${parseFloat(docData.amount || 0).toFixed(2)}`, styles: { halign: "right", fontStyle: "bold", fillColor: [...MGRAY], textColor: [...BLACK] } },
+      { content: rm(docData.amount), styles: { halign: "right", fontStyle: "bold", fillColor: [...MGRAY], textColor: [...BLACK] } },
     ]],
     showFoot: "lastPage",
     styles:     { fontSize: 9, cellPadding: 4 },

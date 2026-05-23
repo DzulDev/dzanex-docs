@@ -4,6 +4,7 @@ import { FileText, Receipt, ShoppingCart, Truck, RefreshCw, TrendingUp, Wallet, 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { getConfig } from "../utils/storage";
 import { getRows, getToken } from "../utils/google";
+import { fmtMYR } from "../utils/fmt";
 
 const DOC_TYPES = [
   { key: "Quotation", label: "Quotation",       icon: FileText,     path: "/quotation", statuses: ["Pending", "Accepted", "Rejected"] },
@@ -80,9 +81,6 @@ function fmtDate(d) {
   return `${parseInt(day)} ${mon[parseInt(m) - 1]} ${y}`;
 }
 
-function fmtMYR(n) {
-  return `MYR ${Number(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
-}
 
 export default function Dashboard() {
   const [allData, setAllData] = useState(null);

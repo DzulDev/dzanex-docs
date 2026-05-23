@@ -9,6 +9,7 @@ import {
 } from "../utils/google";
 import { generatePaymentVoucher } from "../utils/pdf";
 import { showToast } from "../utils/toast";
+import { fmt2 } from "../utils/fmt";
 
 export default function PaymentVoucherPage() {
   const navigate  = useNavigate();
@@ -215,7 +216,7 @@ export default function PaymentVoucherPage() {
               <div className="bg-white rounded-xl border border-gray-200 p-5 flex justify-between items-center">
                 <span className="font-semibold text-gray-700">Total Paid</span>
                 <span className="text-xl font-bold text-gray-800">
-                  MYR {parseFloat(form.amount || 0).toFixed(2)}
+                  MYR {fmt2(form.amount)}
                 </span>
               </div>
             )}

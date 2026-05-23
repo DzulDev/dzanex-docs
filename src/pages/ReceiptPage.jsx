@@ -9,6 +9,7 @@ import {
 } from "../utils/google";
 import { generateReceipt } from "../utils/pdf";
 import { showToast } from "../utils/toast";
+import { fmt2 } from "../utils/fmt";
 
 const PAYMENT_METHODS = ["Bank Transfer", "Cash", "Cheque", "Online Transfer", "Credit Card", "Other"];
 
@@ -217,7 +218,7 @@ export default function ReceiptPage() {
               <div className="bg-white rounded-xl border border-gray-200 p-5 flex justify-between items-center">
                 <span className="font-semibold text-gray-700">Total Received</span>
                 <span className="text-xl font-bold text-green-600">
-                  MYR {parseFloat(form.amount || 0).toFixed(2)}
+                  MYR {fmt2(form.amount)}
                 </span>
               </div>
             )}

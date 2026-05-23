@@ -1,4 +1,5 @@
 import { Plus, Trash2 } from "lucide-react";
+import { fmt2 } from "../utils/fmt";
 
 export default function ItemsTable({ items, onChange, showPrice = true }) {
   function add() {
@@ -83,7 +84,7 @@ export default function ItemsTable({ items, onChange, showPrice = true }) {
                 )}
                 {showPrice && (
                   <td className="px-3 py-2 text-right text-gray-700 font-medium">
-                    {(Number(item.qty || 0) * Number(item.unitPrice || 0)).toFixed(2)}
+                    {fmt2(Number(item.qty || 0) * Number(item.unitPrice || 0))}
                   </td>
                 )}
                 {!showPrice && (
@@ -141,7 +142,7 @@ export default function ItemsTable({ items, onChange, showPrice = true }) {
         {showPrice && (
           <div className="text-right text-sm">
             <span className="text-gray-500 mr-3">Subtotal:</span>
-            <span className="font-semibold text-gray-800">MYR {subtotal.toFixed(2)}</span>
+            <span className="font-semibold text-gray-800">MYR {fmt2(subtotal)}</span>
           </div>
         )}
       </div>
