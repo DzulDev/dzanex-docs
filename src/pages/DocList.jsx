@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getConfig } from "../utils/storage";
 import { getRows, updateCell, getToken, getSheetGid, deleteSheetRow, deleteDriveFile, appendRow, ensureDriveFolder, uploadPDF, ensureSheetExists, uploadFile } from "../utils/google";
@@ -209,9 +209,7 @@ export default function DocList({ sheetName, title }) {
   const [openConvert,   setOpenConvert]   = useState(null);
   const [convertPos,    setConvertPos]    = useState(null);
   const [receiptPrompt, setReceiptPrompt] = useState(null);
-  const [uploading,     setUploading]     = useState(null);
-  const [uploadTarget,  setUploadTarget]  = useState(null);
-  const fileInputRef = useRef(null);
+  const [uploading, setUploading] = useState(null);
 
   const navigate = useNavigate();
   const convertOptions = CONVERT_OPTIONS[sheetName] || [];
@@ -310,13 +308,7 @@ export default function DocList({ sheetName, title }) {
       showToast("Upload failed — " + e.message, "error");
     } finally {
       setUploading(null);
-      setUploadTarget(null);
     }
-  }
-
-  function triggerUpload(row, field, col, label) {
-    setUploadTarget({ row, field, col, label });
-    fileInputRef.current?.click();
   }
 
   function toggleStatus(e, row) {
@@ -454,19 +446,6 @@ export default function DocList({ sheetName, title }) {
         </div>
       )}
 
-      {/* Hidden file input for supplier invoice upload */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".pdf,application/pdf,image/*"
-        className="hidden"
-        onChange={e => {
-          if (e.target.files?.[0] && uploadTarget)
-            handleAttachUpload(uploadTarget.row, e.target.files[0], uploadTarget.field, uploadTarget.col, uploadTarget.label);
-          e.target.value = "";
-        }}
-      />
-
       {/* Backdrop */}
       {(openStatus !== null || openConvert !== null) && (
         <div className="fixed inset-0 z-40" onClick={closeAll} />
@@ -579,13 +558,11 @@ export default function DocList({ sheetName, title }) {
                           <Paperclip size={11} /> SI
                         </a>
                       ) : (
-                        <button
-                          disabled={!!uploading}
-                          onClick={() => triggerUpload(row, "Supplier Invoice", SUPPLIER_INV_COL, "Supplier Invoice")}
-                          className="inline-flex items-center justify-center gap-1 text-xs py-2 px-2.5 rounded-lg border border-dashed border-gray-300 text-gray-400 hover:border-orange-300 hover:text-orange-500 transition-colors disabled:opacity-50"
-                          title="Attach supplier invoice">
+                        <label className={`inline-flex items-center justify-center gap-1 text-xs py-2 px-2.5 rounded-lg border border-dashed border-gray-300 text-gray-400 hover:border-orange-300 hover:text-orange-500 transition-colors cursor-pointer ${uploading ? "opacity-50 pointer-events-none" : ""}`} title="Attach supplier invoice">
+                          <input type="file" accept=".pdf,application/pdf,image/*" className="hidden"
+                            onChange={e => { if (e.target.files?.[0]) handleAttachUpload(row, e.target.files[0], "Supplier Invoice", SUPPLIER_INV_COL, "Supplier Invoice"); e.target.value = ""; }} />
                           {uploading === `${row._rowNum}-Supplier Invoice` ? <Loader2 size={11} className="animate-spin" /> : <Paperclip size={11} />}
-                        </button>
+                        </label>
                       )
                     )}
                     {(sheetName === "PO" || sheetName === "Invoice") && (
@@ -596,13 +573,11 @@ export default function DocList({ sheetName, title }) {
                           <Paperclip size={11} /> PP
                         </a>
                       ) : (
-                        <button
-                          disabled={!!uploading}
-                          onClick={() => triggerUpload(row, "Payment Proof", PAYMENT_PROOF_COL[sheetName], "Payment Proof")}
-                          className="inline-flex items-center justify-center gap-1 text-xs py-2 px-2.5 rounded-lg border border-dashed border-gray-300 text-gray-400 hover:border-green-300 hover:text-green-500 transition-colors disabled:opacity-50"
-                          title="Attach payment proof">
+                        <label className={`inline-flex items-center justify-center gap-1 text-xs py-2 px-2.5 rounded-lg border border-dashed border-gray-300 text-gray-400 hover:border-green-300 hover:text-green-500 transition-colors cursor-pointer ${uploading ? "opacity-50 pointer-events-none" : ""}`} title="Attach payment proof">
+                          <input type="file" accept=".pdf,application/pdf,image/*" className="hidden"
+                            onChange={e => { if (e.target.files?.[0]) handleAttachUpload(row, e.target.files[0], "Payment Proof", PAYMENT_PROOF_COL[sheetName], "Payment Proof"); e.target.value = ""; }} />
                           {uploading === `${row._rowNum}-Payment Proof` ? <Loader2 size={11} className="animate-spin" /> : <Paperclip size={11} />}
-                        </button>
+                        </label>
                       )
                     )}
                     {convertOptions.length > 0 && (
@@ -693,16 +668,11 @@ export default function DocList({ sheetName, title }) {
                               <Paperclip size={12} /> View
                             </a>
                           ) : (
-                            <button
-                              disabled={!!uploading}
-                              onClick={() => triggerUpload(row, "Supplier Invoice", SUPPLIER_INV_COL, "Supplier Invoice")}
-                              className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-orange-500 transition-colors disabled:opacity-50"
-                              title="Attach supplier invoice"
-                            >
-                              {uploading === `${row._rowNum}-Supplier Invoice`
-                                ? <Loader2 size={12} className="animate-spin" />
-                                : <><Paperclip size={12} /> Attach</>}
-                            </button>
+                            <label className={`inline-flex items-center gap-1 text-xs text-gray-400 hover:text-orange-500 transition-colors cursor-pointer ${uploading ? "opacity-50 pointer-events-none" : ""}`} title="Attach supplier invoice">
+                              <input type="file" accept=".pdf,application/pdf,image/*" className="hidden"
+                                onChange={e => { if (e.target.files?.[0]) handleAttachUpload(row, e.target.files[0], "Supplier Invoice", SUPPLIER_INV_COL, "Supplier Invoice"); e.target.value = ""; }} />
+                              {uploading === `${row._rowNum}-Supplier Invoice` ? <Loader2 size={12} className="animate-spin" /> : <><Paperclip size={12} /> Attach</>}
+                            </label>
                           )}
                         </td>
                       )}
@@ -714,16 +684,11 @@ export default function DocList({ sheetName, title }) {
                               <Paperclip size={12} /> View
                             </a>
                           ) : (
-                            <button
-                              disabled={!!uploading}
-                              onClick={() => triggerUpload(row, "Payment Proof", PAYMENT_PROOF_COL[sheetName], "Payment Proof")}
-                              className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-green-500 transition-colors disabled:opacity-50"
-                              title="Attach payment proof"
-                            >
-                              {uploading === `${row._rowNum}-Payment Proof`
-                                ? <Loader2 size={12} className="animate-spin" />
-                                : <><Paperclip size={12} /> Attach</>}
-                            </button>
+                            <label className={`inline-flex items-center gap-1 text-xs text-gray-400 hover:text-green-500 transition-colors cursor-pointer ${uploading ? "opacity-50 pointer-events-none" : ""}`} title="Attach payment proof">
+                              <input type="file" accept=".pdf,application/pdf,image/*" className="hidden"
+                                onChange={e => { if (e.target.files?.[0]) handleAttachUpload(row, e.target.files[0], "Payment Proof", PAYMENT_PROOF_COL[sheetName], "Payment Proof"); e.target.value = ""; }} />
+                              {uploading === `${row._rowNum}-Payment Proof` ? <Loader2 size={12} className="animate-spin" /> : <><Paperclip size={12} /> Attach</>}
+                            </label>
                           )}
                         </td>
                       )}
