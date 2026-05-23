@@ -217,7 +217,7 @@ export default function Dashboard() {
 
       {/* Status breakdown — one card per doc type */}
       <div className="grid grid-cols-2 gap-3">
-        {DOC_TYPES.map(({ key, label, icon: Icon, path, statuses }, idx) => {
+        {DOC_TYPES.map(({ key, label, icon: Icon, path, statuses }) => {
           const total = (allData[key] || []).length;
           return (
             <button
