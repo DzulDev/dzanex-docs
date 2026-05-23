@@ -91,8 +91,8 @@ export async function createSpreadsheet(token) {
 
 const HEADERS = {
   Quotation:   ["Doc No", "Date", "Client", "Items", "Subtotal", "Tax", "Total", "Status", "Drive Link", "Notes", "_raw"],
-  Invoice:     ["Doc No", "Date", "Client", "Items", "Subtotal", "Tax", "Total", "Status", "Drive Link", "Notes", "Payment Proof", "_raw"],
-  PO:          ["Doc No", "Date", "Supplier", "Items", "Subtotal", "Tax", "Total", "Status", "Drive Link", "Notes", "Supplier Invoice", "Payment Proof", "_raw"],
+  Invoice:     ["Doc No", "Date", "Client", "Items", "Subtotal", "Tax", "Total", "Status", "Drive Link", "Notes", "Deposit Proof", "Balance Proof", "_raw"],
+  PO:          ["Doc No", "Date", "Supplier", "Items", "Subtotal", "Tax", "Total", "Status", "Drive Link", "Notes", "Supplier Invoice", "Deposit Proof", "Balance Proof", "_raw"],
   DO:          ["Doc No", "Date", "Client", "Items", "Total Qty", "Status", "Drive Link", "Notes", "_raw"],
   PV:          ["Doc No", "Date", "Paid To", "Purpose", "Amount", "Status", "Drive Link", "Notes", "_raw"],
   CreditNote:  ["Doc No", "Date", "Client", "Items", "Subtotal", "Tax", "Total", "Status", "Drive Link", "Notes", "_raw"],
@@ -233,6 +233,81 @@ export async function deleteDriveFile(driveLink, token) {
     { method: "DELETE", headers: { Authorization: `Bearer ${t}` } }
   );
   if (!res.ok) await guardFetch(res, "deleteDriveFile");
+}
+
+// Migrates Invoice and PO sheets to use Deposit Proof + Balance Proof.
+// Renames "Payment Proof" → "Deposit Proof" if found, then inserts "Balance Proof" before "_raw".
+export async function ensureDepositBalanceCol(sheetId, sheetName, token) {
+  const t = token || getToken();
+  try {
+    const res = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${sheetName}!1:1`,
+      { headers: { Authorization: `Bearer ${t}` } }
+    );
+    const data = await res.json();
+    const headers = [...(data.values?.[0] || [])];
+
+    const hasDeposit = headers.includes("Deposit Proof");
+    const hasBalance = headers.includes("Balance Proof");
+    if (hasDeposit && hasBalance) return;
+
+    // Rename "Payment Proof" → "Deposit Proof"
+    if (headers.includes("Payment Proof") && !hasDeposit) {
+      const idx = headers.indexOf("Payment Proof");
+      const col = String.fromCharCode(65 + idx);
+      await fetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${sheetName}!${col}1?valueInputOption=RAW`,
+        { method: "PUT", headers: { Authorization: `Bearer ${t}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ values: [["Deposit Proof"]] }) }
+      );
+      headers[idx] = "Deposit Proof";
+    }
+
+    if (hasBalance) return; // Balance already exists, done
+
+    // Get sheet gid for insertDimension
+    const gidRes = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}?fields=sheets.properties`,
+      { headers: { Authorization: `Bearer ${t}` } }
+    );
+    const gidData = await gidRes.json();
+    const gid = gidData.sheets?.find(s => s.properties.title === sheetName)?.properties?.sheetId;
+    if (gid == null) return;
+
+    // If Deposit Proof also missing, insert 2 columns; otherwise insert 1
+    const rawIdx = headers.indexOf("_raw");
+    if (rawIdx < 0) return;
+    const needDeposit = !headers.includes("Deposit Proof");
+    const insertCount = needDeposit ? 2 : 1;
+
+    await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}:batchUpdate`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${t}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        requests: [{ insertDimension: {
+          range: { sheetId: gid, dimension: "COLUMNS", startIndex: rawIdx, endIndex: rawIdx + insertCount },
+          inheritFromBefore: true,
+        }}],
+      }),
+    });
+
+    if (needDeposit) {
+      const depCol = String.fromCharCode(65 + rawIdx);
+      const balCol = String.fromCharCode(65 + rawIdx + 1);
+      await fetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${sheetName}!${depCol}1:${balCol}1?valueInputOption=RAW`,
+        { method: "PUT", headers: { Authorization: `Bearer ${t}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ values: [["Deposit Proof", "Balance Proof"]] }) }
+      );
+    } else {
+      const balCol = String.fromCharCode(65 + rawIdx);
+      await fetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${sheetName}!${balCol}1?valueInputOption=RAW`,
+        { method: "PUT", headers: { Authorization: `Bearer ${t}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ values: [["Balance Proof"]] }) }
+      );
+    }
+  } catch { /* skip */ }
 }
 
 export async function getColLetter(sheetId, sheetName, header, token) {
