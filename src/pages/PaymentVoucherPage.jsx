@@ -78,7 +78,7 @@ export default function PaymentVoucherPage() {
       await appendRow(sheetId, "PV", [
         docNo, form.date, form.paidTo.name, form.purpose,
         parseFloat(form.amount || 0).toFixed(2),
-        "Pending", driveLink, form.notes, "", "", rawJson, // Receipt/Invoice + Payment Proof
+        "Paid", driveLink, form.notes, "", "", rawJson, // Receipt/Invoice + Payment Proof
       ], token);
 
       localStorage.setItem(`dzanex_doc_${docNo}`, rawJson);
