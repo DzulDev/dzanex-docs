@@ -95,7 +95,7 @@ export default function Dashboard() {
     const token = getToken();
     if (!sheetId || !token) { setLoading(false); return; }
     try {
-      const [qt, inv, po, doRows, pv, rec] = await Promise.all([
+      const results = await Promise.allSettled([
         getRows(sheetId, "Quotation", token),
         getRows(sheetId, "Invoice",   token),
         getRows(sheetId, "PO",        token),
@@ -103,6 +103,10 @@ export default function Dashboard() {
         getRows(sheetId, "PV",        token),
         getRows(sheetId, "Receipt",   token),
       ]);
+      // If any single sheet returns 401, redirect to login
+      const expired = results.find(r => r.status === "rejected" && r.reason?.httpStatus === 401);
+      if (expired) { navigate("/login"); return; }
+      const [qt, inv, po, doRows, pv, rec] = results.map(r => r.status === "fulfilled" ? r.value : []);
       setAllData({ Quotation: qt, Invoice: inv, PO: po, DO: doRows, PV: pv, Receipt: rec });
     } catch (e) {
       console.error(e);
