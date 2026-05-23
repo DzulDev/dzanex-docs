@@ -5,7 +5,7 @@ import DocList from "./DocList";
 import { getConfig } from "../utils/storage";
 import {
   getToken, getNextDocNumber, appendRow,
-  ensureDriveFolder, uploadPDF, ensureSheetExists, ensurePVAttachmentCols,
+  ensureDriveFolder, uploadPDF, ensureSheetExists, ensurePVSheetHeaders, ensurePVAttachmentCols,
 } from "../utils/google";
 import { generatePaymentVoucher } from "../utils/pdf";
 import { showToast } from "../utils/toast";
@@ -39,7 +39,8 @@ export default function PaymentVoucherPage() {
       if (!sheetId || !token) { navigate("/login"); return; }
       try {
         await ensureSheetExists(sheetId, "PV", token);
-        ensurePVAttachmentCols(sheetId, token); // fire-and-forget migration
+        await ensurePVSheetHeaders(sheetId, token); // fix missing header row before counting
+        ensurePVAttachmentCols(sheetId, token); // fire-and-forget — adds attachment cols
         const no = await getNextDocNumber(sheetId, "PV", "PV", token);
         setDocNo(no);
       } catch (e) {
