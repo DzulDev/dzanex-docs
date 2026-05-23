@@ -101,15 +101,15 @@ async function autoCreateReceipt(row, paymentMethod, reference, date) {
   const token = getToken();
   if (!sheetId || !token) return;
 
-  const invoiceDocNo = row["Doc No"] || "";
+  const prefill = getPrefill(row);
+  const invoiceDocNo = prefill?.docNo || row["Doc No"] || "";
   const parts = invoiceDocNo.split("-");
   if (parts.length < 3) return;
   const receiptDocNo = `REC-${parts[1]}-${parts[2]}`;
 
-  const prefill = getPrefill(row);
   const today   = date || (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; })();
   const client  = prefill?.to?.name || row["Client"] || "";
-  const amount  = row["Total"] || "0.00";
+  const amount  = prefill?.items?.reduce((s, i) => s + Number(i.qty||0)*Number(i.unitPrice||0), 0)?.toFixed(2) || row["Total"] || "0.00";
 
   const docData = {
     docNo: receiptDocNo, date: today, client, amount,
@@ -143,12 +143,11 @@ async function autoCreateDO(row, date) {
   const token = getToken();
   if (!sheetId || !token) return;
 
-  const invoiceDocNo = row["Doc No"] || "";
+  const prefill = getPrefill(row);
+  const invoiceDocNo = prefill?.docNo || row["Doc No"] || "";
   const parts = invoiceDocNo.split("-");
   if (parts.length < 3) return;
   const doDocNo = `DO-${parts[1]}-${parts[2]}`;
-
-  const prefill = getPrefill(row);
   const today   = date || (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; })();
   const client  = prefill?.to?.name || row["Client"] || "";
   const items   = prefill?.items || [{ description: row["Items"] || "", qty: 1, unit: "unit", notes: "" }];
@@ -241,7 +240,8 @@ export default function DocList({ sheetName, title }) {
     try {
       await updateCell(sheetId, sheetName, row._rowNum, col, newStatus, token);
       setRows(prev => prev.map(r => r._rowNum === row._rowNum ? { ...r, Status: newStatus } : r));
-      showToast(`${row["Doc No"]} → ${newStatus}`);
+      const _docNo = getPrefill(row)?.docNo || row["Doc No"] || "Doc";
+      showToast(`${_docNo} → ${newStatus}`);
       if (sheetName === "Invoice" && newStatus === "Paid") {
         const localDate = new Date();
         const dateStr = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, "0")}-${String(localDate.getDate()).padStart(2, "0")}`;
@@ -344,7 +344,7 @@ export default function DocList({ sheetName, title }) {
               <h3 className="font-semibold text-gray-800">Create Receipt?</h3>
             </div>
             <p className="text-xs text-gray-400 mb-5 ml-12">
-              Auto-generate receipt for <span className="font-mono font-semibold text-blue-700">{receiptPrompt.row["Doc No"]}</span>
+              Auto-generate receipt for <span className="font-mono font-semibold text-blue-700">{getPrefill(receiptPrompt.row)?.docNo || receiptPrompt.row["Doc No"] || "this invoice"}</span>
             </p>
 
             <div className="space-y-3">
