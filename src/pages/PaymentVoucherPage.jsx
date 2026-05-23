@@ -8,6 +8,7 @@ import {
   ensureDriveFolder, uploadPDF, ensureSheetExists,
 } from "../utils/google";
 import { generatePaymentVoucher } from "../utils/pdf";
+import { showToast } from "../utils/toast";
 
 export default function PaymentVoucherPage() {
   const navigate  = useNavigate();
@@ -80,14 +81,14 @@ export default function PaymentVoucherPage() {
       ], token);
 
       localStorage.setItem(`dzanex_doc_${docNo}`, rawJson);
-      alert(`Payment Voucher saved!\n${docNo}\nDrive link: ${driveLink}`);
+      showToast(`Payment Voucher saved — ${docNo}`);
       navigate("/");
     } catch (e) {
       if (e.httpStatus === 401) {
-        alert("Session expired. Please sign in again.");
+        showToast("Session expired. Please sign in again.", "error");
         navigate("/login");
       } else {
-        alert(`Error saving document: ${e.message}`);
+        showToast(`Error saving document: ${e.message}`, "error");
       }
     } finally {
       setSaving(false);

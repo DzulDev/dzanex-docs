@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getConfig } from "../utils/storage";
 import { getRows, updateCell, getToken, getSheetGid, deleteSheetRow, deleteDriveFile, appendRow, ensureDriveFolder, uploadPDF, ensureSheetExists } from "../utils/google";
-import { generateReceipt } from "../utils/pdf";
+import { generateReceipt, generateDO } from "../utils/pdf";
+import { showToast } from "../utils/toast";
 import { ChevronDown, ExternalLink, FileText, Loader2, RefreshCw, Trash2, Receipt } from "lucide-react";
 
 const PAYMENT_METHODS = ["Bank Transfer", "Cash", "Cheque", "Online Transfer", "Credit Card", "Other"];
@@ -95,7 +96,7 @@ const STATUS_DOT = {
   Voided:    "bg-gray-300",
 };
 
-async function autoCreateReceipt(row, paymentMethod, reference) {
+async function autoCreateReceipt(row, paymentMethod, reference, date) {
   const { sheetId, driveFolderId, logoDataUrl, stampDataUrl } = getConfig();
   const token = getToken();
   if (!sheetId || !token) return;
@@ -106,7 +107,7 @@ async function autoCreateReceipt(row, paymentMethod, reference) {
   const receiptDocNo = `REC-${parts[1]}-${parts[2]}`;
 
   const prefill = getPrefill(row);
-  const today   = new Date().toISOString().split("T")[0];
+  const today   = date || (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; })();
   const client  = prefill?.to?.name || row["Client"] || "";
   const amount  = row["Total"] || "0.00";
 
@@ -130,8 +131,51 @@ async function autoCreateReceipt(row, paymentMethod, reference) {
       paymentMethod || "Bank Transfer", invoiceDocNo,
       "Issued", driveLink, "", rawJson,
     ], token);
+    showToast(`Receipt created — ${receiptDocNo}`, "info");
   } catch (e) {
     console.error("Auto-create receipt failed:", e);
+    showToast("Receipt could not be created. Try manually.", "error");
+  }
+}
+
+async function autoCreateDO(row, date) {
+  const { sheetId, driveFolderId, logoDataUrl, stampDataUrl } = getConfig();
+  const token = getToken();
+  if (!sheetId || !token) return;
+
+  const invoiceDocNo = row["Doc No"] || "";
+  const parts = invoiceDocNo.split("-");
+  if (parts.length < 3) return;
+  const doDocNo = `DO-${parts[1]}-${parts[2]}`;
+
+  const prefill = getPrefill(row);
+  const today   = date || (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; })();
+  const client  = prefill?.to?.name || row["Client"] || "";
+  const items   = prefill?.items || [{ description: row["Items"] || "", qty: 1, unit: "unit", notes: "" }];
+
+  const docData = {
+    docNo: doDocNo, date: today,
+    to: prefill?.to || { name: client },
+    items, subject: prefill?.subject || "", notes: prefill?.notes || "",
+  };
+
+  try {
+    await ensureSheetExists(sheetId, "DO", token);
+    const pdfBytes    = generateDO(docData, logoDataUrl || null, stampDataUrl || null);
+    const folderId    = await ensureDriveFolder("DO", driveFolderId, token);
+    const filename    = `${doDocNo} - ${client || "Unknown"}.pdf`;
+    const driveLink   = await uploadPDF(pdfBytes, filename, folderId, token) || "";
+    const itemsSummary = items.map(i => i.description).join(", ");
+    const totalQty     = items.reduce((s, i) => s + (Number(i.qty) || 0), 0);
+    const rawJson      = JSON.stringify(docData);
+    await appendRow(sheetId, "DO", [
+      doDocNo, today, client, itemsSummary,
+      totalQty, "Pending", driveLink, docData.notes, rawJson,
+    ], token);
+    showToast(`Delivery Order created — ${doDocNo}`, "info");
+  } catch (e) {
+    console.error("Auto-create DO failed:", e);
+    showToast("Delivery Order could not be created. Try manually.", "error");
   }
 }
 
@@ -198,7 +242,9 @@ export default function DocList({ sheetName, title }) {
       await updateCell(sheetId, sheetName, row._rowNum, col, newStatus, token);
       setRows(prev => prev.map(r => r._rowNum === row._rowNum ? { ...r, Status: newStatus } : r));
       if (sheetName === "Invoice" && newStatus === "Paid") {
-        setReceiptPrompt({ row, paymentMethod: "Bank Transfer", reference: "" });
+        const localDate = new Date();
+        const dateStr = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, "0")}-${String(localDate.getDate()).padStart(2, "0")}`;
+        setReceiptPrompt({ row, paymentMethod: "Bank Transfer", reference: "", date: dateStr, createDO: false });
       }
     } catch (e) {
       console.error(e);
@@ -301,6 +347,15 @@ export default function DocList({ sheetName, title }) {
 
             <div className="space-y-3">
               <div>
+                <label className="label">Payment Date</label>
+                <input
+                  type="date"
+                  className="input"
+                  value={receiptPrompt.date}
+                  onChange={e => setReceiptPrompt(p => ({ ...p, date: e.target.value }))}
+                />
+              </div>
+              <div>
                 <label className="label">Payment Method</label>
                 <select
                   className="input"
@@ -322,6 +377,21 @@ export default function DocList({ sheetName, title }) {
                   onChange={e => setReceiptPrompt(p => ({ ...p, reference: e.target.value }))}
                 />
               </div>
+              <div className="border border-gray-200 rounded-xl p-3 space-y-2">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={receiptPrompt.createDO}
+                    onChange={e => setReceiptPrompt(p => ({ ...p, createDO: e.target.checked }))}
+                    className="w-4 h-4 rounded accent-[#1B3A5C] shrink-0"
+                  />
+                  <span className="text-xs font-semibold text-gray-700">Also create Delivery Order (DO)</span>
+                </label>
+                <div className="text-[11px] text-gray-400 ml-7 space-y-1">
+                  <p><span className="font-semibold text-gray-500">Tick</span> — DO not yet created in the system. Need to create one now.</p>
+                  <p><span className="font-semibold text-gray-500">Untick</span> — DO already exists, or service job (no delivery).</p>
+                </div>
+              </div>
             </div>
 
             <div className="flex gap-2 mt-5">
@@ -329,11 +399,12 @@ export default function DocList({ sheetName, title }) {
                 onClick={() => setReceiptPrompt(null)}
                 className="flex-1 px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
               >
-                Skip
+                Cancel
               </button>
               <button
                 onClick={() => {
-                  autoCreateReceipt(receiptPrompt.row, receiptPrompt.paymentMethod, receiptPrompt.reference);
+                  autoCreateReceipt(receiptPrompt.row, receiptPrompt.paymentMethod, receiptPrompt.reference, receiptPrompt.date);
+                  if (receiptPrompt.createDO) autoCreateDO(receiptPrompt.row, receiptPrompt.date);
                   setReceiptPrompt(null);
                 }}
                 className="flex-1 px-4 py-2 rounded-lg bg-[#1B3A5C] text-white text-sm font-medium hover:bg-[#1B3A5C]/90 transition-colors"

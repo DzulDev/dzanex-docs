@@ -8,6 +8,7 @@ import {
   ensureDriveFolder, uploadPDF, ensureSheetExists,
 } from "../utils/google";
 import { generateReceipt } from "../utils/pdf";
+import { showToast } from "../utils/toast";
 
 const PAYMENT_METHODS = ["Bank Transfer", "Cash", "Cheque", "Online Transfer", "Credit Card", "Other"];
 
@@ -80,14 +81,14 @@ export default function ReceiptPage() {
       ], token);
 
       localStorage.setItem(`dzanex_doc_${docNo}`, rawJson);
-      alert(`Receipt saved!\n${docNo}\nDrive link: ${driveLink}`);
+      showToast(`Receipt saved — ${docNo}`);
       navigate("/");
     } catch (e) {
       if (e.httpStatus === 401) {
-        alert("Session expired. Please sign in again.");
+        showToast("Session expired. Please sign in again.", "error");
         navigate("/login");
       } else {
-        alert(`Error saving document: ${e.message}`);
+        showToast(`Error saving document: ${e.message}`, "error");
       }
     } finally {
       setSaving(false);

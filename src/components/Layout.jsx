@@ -26,10 +26,22 @@ const UPDATE_CHECK_INTERVAL = 60_000; // check every 60s
 const AUTO_REFRESH_DELAY    = 20_000; // auto-refresh after 20s if not dismissed
 
 export default function Layout({ children }) {
-  const [open, setOpen] = useState(false);
-  const [showHelp, setShowHelp] = useState(false);
+  const [open, setOpen]           = useState(false);
+  const [showHelp, setShowHelp]   = useState(false);
   const [updateReady, setUpdateReady] = useState(false);
+  const [toast, setToast]         = useState(null);
   const autoRefreshTimer = useRef(null);
+  const toastTimer       = useRef(null);
+
+  useEffect(() => {
+    function handleToast(e) {
+      setToast(e.detail);
+      clearTimeout(toastTimer.current);
+      toastTimer.current = setTimeout(() => setToast(null), 4000);
+    }
+    window.addEventListener("dzanex-toast", handleToast);
+    return () => window.removeEventListener("dzanex-toast", handleToast);
+  }, []);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -421,6 +433,19 @@ export default function Layout({ children }) {
             </div>
           </div>
         )}
+        {/* Toast notification */}
+        {toast && (
+          <div className={`fixed bottom-5 right-5 z-50 flex items-start gap-3 px-4 py-3 rounded-xl shadow-xl text-sm font-medium text-white max-w-xs animate-fade-in
+            ${toast.type === "error" ? "bg-red-500" : toast.type === "info" ? "bg-[#57A9A9]" : "bg-[#1B3A5C]"}`}
+          >
+            <span className="mt-0.5 shrink-0">{toast.type === "error" ? "✕" : "✓"}</span>
+            <span className="leading-snug">{toast.message}</span>
+            <button onClick={() => setToast(null)} className="ml-1 opacity-60 hover:opacity-100 shrink-0">
+              <X size={14} />
+            </button>
+          </div>
+        )}
+
         <footer className="shrink-0 border-t border-gray-100 bg-white px-4 py-2 flex items-center justify-between text-xs text-gray-400">
           <span>© 2025 Dzanex Technology</span>
           <span>v{version}</span>

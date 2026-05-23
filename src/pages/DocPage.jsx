@@ -4,6 +4,7 @@ import DocForm from "../components/DocForm";
 import DocList from "./DocList";
 import { getConfig } from "../utils/storage";
 import { getToken, getNextDocNumber, appendRow, ensureDriveFolder, uploadPDF, ensureRawColumn, ensureSheetExists } from "../utils/google";
+import { showToast } from "../utils/toast";
 
 export default function DocPage({ title, prefix, sheetName, showPrice, showTax, showValidUntil, partyLabel, generateFn }) {
   const [docNo, setDocNo] = useState("");
@@ -77,15 +78,15 @@ export default function DocPage({ title, prefix, sheetName, showPrice, showTax, 
       await appendRow(sheetId, sheetName, row, token);
       localStorage.setItem(`dzanex_doc_${formData.docNo}`, rawJson); // local cache too
 
-      alert(`${title} saved!\n${formData.docNo}\nDrive link: ${driveLink}`);
+      showToast(`${title} saved — ${formData.docNo}`);
       navigate("/");
     } catch (e) {
       console.error(e);
       if (e.httpStatus === 401) {
-        alert("Session expired. Please sign in again.");
+        showToast("Session expired. Please sign in again.", "error");
         navigate("/login");
       } else {
-        alert(`Error saving document: ${e.message}`);
+        showToast(`Error saving document: ${e.message}`, "error");
       }
     } finally {
       setSaving(false);

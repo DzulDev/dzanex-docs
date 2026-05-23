@@ -1,14 +1,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileText, Receipt, ShoppingCart, Truck, RefreshCw, TrendingUp } from "lucide-react";
+import { FileText, Receipt, ShoppingCart, Truck, RefreshCw, TrendingUp, Wallet } from "lucide-react";
 import { getConfig } from "../utils/storage";
 import { getRows, getToken } from "../utils/google";
 
 const DOC_TYPES = [
-  { key: "Quotation", label: "Quotation",      icon: FileText,     path: "/quotation", statuses: ["Pending", "Accepted", "Rejected"] },
-  { key: "Invoice",   label: "Invoice",         icon: Receipt,      path: "/invoice",   statuses: ["Pending", "Paid", "Overdue"] },
-  { key: "PO",        label: "Purchase Order",  icon: ShoppingCart, path: "/po",        statuses: ["Pending", "Received", "Cancelled"] },
-  { key: "DO",        label: "Delivery Order",  icon: Truck,        path: "/do",        statuses: ["Pending", "Delivered", "Cancelled"] },
+  { key: "Quotation", label: "Quotation",       icon: FileText,     path: "/quotation", statuses: ["Pending", "Accepted", "Rejected"] },
+  { key: "Invoice",   label: "Invoice",          icon: Receipt,      path: "/invoice",   statuses: ["Pending", "Paid", "Overdue"] },
+  { key: "PO",        label: "Purchase Order",   icon: ShoppingCart, path: "/po",        statuses: ["Pending", "Received", "Cancelled"] },
+  { key: "DO",        label: "Delivery Order",   icon: Truck,        path: "/do",        statuses: ["Pending", "Delivered", "Cancelled"] },
+  { key: "PV",        label: "Payment Voucher",  icon: Wallet,       path: "/pv",        statuses: ["Pending", "Paid", "Cancelled"] },
 ];
 
 const STATUS_DOT = {
@@ -55,13 +56,14 @@ export default function Dashboard() {
     const token = getToken();
     if (!sheetId || !token) { setLoading(false); return; }
     try {
-      const [qt, inv, po, doRows] = await Promise.all([
+      const [qt, inv, po, doRows, pv] = await Promise.all([
         getRows(sheetId, "Quotation", token),
         getRows(sheetId, "Invoice",   token),
         getRows(sheetId, "PO",        token),
         getRows(sheetId, "DO",        token),
+        getRows(sheetId, "PV",        token),
       ]);
-      setAllData({ Quotation: qt, Invoice: inv, PO: po, DO: doRows });
+      setAllData({ Quotation: qt, Invoice: inv, PO: po, DO: doRows, PV: pv });
     } catch (e) {
       console.error(e);
       if (e.httpStatus === 401) navigate("/login");
@@ -91,40 +93,64 @@ export default function Dashboard() {
     Invoice:   statusCounts(allData.Invoice),
     PO:        statusCounts(allData.PO),
     DO:        statusCounts(allData.DO),
+    PV:        statusCounts(allData.PV),
   };
 
   // Financial metrics
-  const pendingINVValue  = allData.Invoice.filter(r => !r.Status || r.Status === "Pending").reduce((s, r) => s + (parseFloat(r.Total) || 0), 0);
-  const overdueINVValue  = allData.Invoice.filter(r => r.Status === "Overdue").reduce((s, r) => s + (parseFloat(r.Total) || 0), 0);
-  const toCollect        = pendingINVValue + overdueINVValue;
-  const paidThisMonth    = (() => {
-    const now = new Date();
-    const prefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-    return allData.Invoice
-      .filter(r => r.Status === "Paid" && (r.Date || "").startsWith(prefix))
-      .reduce((s, r) => s + (parseFloat(r.Total) || 0), 0);
-  })();
-  const totalDocs = allData.Quotation.length + allData.Invoice.length + allData.PO.length + allData.DO.length;
+  const now             = new Date();
+  const monthPrefix     = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const pendingINVValue = allData.Invoice.filter(r => !r.Status || r.Status === "Pending").reduce((s, r) => s + (parseFloat(r.Total) || 0), 0);
+  const overdueINVValue = allData.Invoice.filter(r => r.Status === "Overdue").reduce((s, r) => s + (parseFloat(r.Total) || 0), 0);
+  const toCollect       = pendingINVValue + overdueINVValue;
+
+  const paidThisMonth   = allData.Invoice
+    .filter(r => r.Status === "Paid" && (r.Date || "").startsWith(monthPrefix))
+    .reduce((s, r) => s + (parseFloat(r.Total) || 0), 0);
+
+  const spentThisMonth  = [
+    ...allData.PO.filter(r => r.Status === "Paid" && (r.Date || "").startsWith(monthPrefix)).map(r => parseFloat(r.Total)  || 0),
+    ...allData.PV.filter(r => r.Status === "Paid" && (r.Date || "").startsWith(monthPrefix)).map(r => parseFloat(r.Amount) || 0),
+  ].reduce((s, n) => s + n, 0);
+
+  const netThisMonth    = paidThisMonth - spentThisMonth;
 
   // Pending action alerts
   const pendingQT  = counts.Quotation.Pending || 0;
   const pendingINV = counts.Invoice.Pending   || 0;
   const overdueINV = counts.Invoice.Overdue   || 0;
   const pendingDO  = counts.DO.Pending        || 0;
+  const pendingPV  = (allData.PV || []).filter(r => r.Status === "Pending").length;
+  const pendingPVAmt = (allData.PV || []).filter(r => r.Status === "Pending").reduce((s, r) => s + (parseFloat(r.Amount) || 0), 0);
+
+  // Paid invoices that have a matching DO still on Pending (by sequence: INV-2025-017 ↔ DO-2025-017)
+  const paidInvSeqs = new Set(
+    allData.Invoice
+      .filter(r => r.Status === "Paid")
+      .map(r => { const p = (r["Doc No"] || "").split("-"); return p.length >= 3 ? `${p[1]}-${p[2]}` : null; })
+      .filter(Boolean)
+  );
+  const paidPendingDO = allData.DO.filter(r => {
+    if (r.Status !== "Pending") return false;
+    const p = (r["Doc No"] || "").split("-");
+    return p.length >= 3 && paidInvSeqs.has(`${p[1]}-${p[2]}`);
+  });
 
   const alerts = [
-    overdueINV > 0 && { color: "red",    dot: "bg-red-400",    style: "bg-red-50 border-red-200 text-red-700",       path: "/invoice",   msg: `${overdueINV} overdue invoice${overdueINV > 1 ? "s" : ""} — ${fmtMYR(overdueINVValue)}` },
-    pendingINV > 0 && { color: "orange", dot: "bg-orange-400", style: "bg-orange-50 border-orange-200 text-orange-700", path: "/invoice", msg: `${pendingINV} invoice${pendingINV > 1 ? "s" : ""} unpaid — ${fmtMYR(pendingINVValue)}` },
-    pendingQT  > 0 && { color: "yellow", dot: "bg-yellow-400", style: "bg-yellow-50 border-yellow-200 text-yellow-700", path: "/quotation", msg: `${pendingQT} quotation${pendingQT > 1 ? "s" : ""} awaiting client response` },
-    pendingDO  > 0 && { color: "blue",   dot: "bg-blue-500",   style: "bg-blue-50 border-blue-200 text-blue-700",     path: "/do",        msg: `${pendingDO} delivery order${pendingDO > 1 ? "s" : ""} pending` },
+    overdueINV       > 0 && { dot: "bg-red-400",    style: "bg-red-50 border-red-200 text-red-700",         path: "/invoice",   msg: `${overdueINV} overdue invoice${overdueINV > 1 ? "s" : ""} — ${fmtMYR(overdueINVValue)}` },
+    pendingINV       > 0 && { dot: "bg-orange-400", style: "bg-orange-50 border-orange-200 text-orange-700", path: "/invoice",   msg: `${pendingINV} invoice${pendingINV > 1 ? "s" : ""} unpaid — ${fmtMYR(pendingINVValue)}` },
+    paidPendingDO.length > 0 && { dot: "bg-[#57A9A9]",  style: "bg-teal-50 border-teal-200 text-teal-700",  path: "/do",        msg: `${paidPendingDO.length} paid invoice${paidPendingDO.length > 1 ? "s" : ""} — delivery still pending` },
+    pendingPV        > 0 && { dot: "bg-purple-400", style: "bg-purple-50 border-purple-200 text-purple-700", path: "/pv",        msg: `${pendingPV} payment voucher${pendingPV > 1 ? "s" : ""} unpaid — ${fmtMYR(pendingPVAmt)}` },
+    pendingQT        > 0 && { dot: "bg-yellow-400", style: "bg-yellow-50 border-yellow-200 text-yellow-700", path: "/quotation", msg: `${pendingQT} quotation${pendingQT > 1 ? "s" : ""} awaiting client response` },
+    pendingDO        > 0 && { dot: "bg-blue-500",   style: "bg-blue-50 border-blue-200 text-blue-700",       path: "/do",        msg: `${pendingDO} delivery order${pendingDO > 1 ? "s" : ""} pending` },
   ].filter(Boolean);
 
   // Recent 5 documents across all types
   const recent = [
-    ...allData.Quotation.map(r => ({ ...r, _type: "QT" })),
-    ...allData.Invoice.map(r =>   ({ ...r, _type: "INV" })),
-    ...allData.PO.map(r =>        ({ ...r, _type: "PO" })),
-    ...allData.DO.map(r =>        ({ ...r, _type: "DO" })),
+    ...allData.Quotation.map(r => ({ ...r, _type: "QT",  _party: r.Client,   _amt: r.Total })),
+    ...allData.Invoice.map(r =>   ({ ...r, _type: "INV", _party: r.Client,   _amt: r.Total })),
+    ...allData.PO.map(r =>        ({ ...r, _type: "PO",  _party: r.Supplier, _amt: r.Total })),
+    ...allData.DO.map(r =>        ({ ...r, _type: "DO",  _party: r.Client,   _amt: null })),
+    ...allData.PV.map(r =>        ({ ...r, _type: "PV",  _party: r["Paid To"], _amt: r.Amount })),
   ].sort((a, b) => new Date(b.Date) - new Date(a.Date)).slice(0, 5);
 
   return (
@@ -142,20 +168,26 @@ export default function Dashboard() {
       </div>
 
       {/* Financial summary */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-[11px] text-gray-400 mb-1">Total Docs</p>
-          <p className="text-2xl font-bold text-gray-800">{totalDocs}</p>
-        </div>
+      <div className="grid grid-cols-2 gap-3">
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <p className="text-[11px] text-gray-400 mb-1">To Collect</p>
           <p className="text-sm font-bold text-orange-600 leading-tight">{fmtMYR(toCollect)}</p>
-          <p className="text-[10px] text-gray-400 mt-0.5">{pendingINV + overdueINV} invoice{pendingINV + overdueINV !== 1 ? "s" : ""}</p>
+          <p className="text-[10px] text-gray-400 mt-0.5">{pendingINV + overdueINV} unpaid invoice{pendingINV + overdueINV !== 1 ? "s" : ""}</p>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-[11px] text-gray-400 mb-1">Paid (Month)</p>
+          <p className="text-[11px] text-gray-400 mb-1">Income (Month)</p>
           <p className="text-sm font-bold text-green-600 leading-tight">{fmtMYR(paidThisMonth)}</p>
-          <p className="text-[10px] text-gray-400 mt-0.5">collected</p>
+          <p className="text-[10px] text-gray-400 mt-0.5">paid invoices</p>
+        </div>
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <p className="text-[11px] text-gray-400 mb-1">Expenses (Month)</p>
+          <p className="text-sm font-bold text-red-500 leading-tight">{fmtMYR(spentThisMonth)}</p>
+          <p className="text-[10px] text-gray-400 mt-0.5">paid PO + PV</p>
+        </div>
+        <div className={`rounded-xl border p-4 ${netThisMonth >= 0 ? "bg-[#57A9A9]/5 border-[#57A9A9]/30" : "bg-red-50 border-red-200"}`}>
+          <p className="text-[11px] text-gray-400 mb-1">Net (Month)</p>
+          <p className={`text-sm font-bold leading-tight ${netThisMonth >= 0 ? "text-[#57A9A9]" : "text-red-500"}`}>{fmtMYR(netThisMonth)}</p>
+          <p className="text-[10px] text-gray-400 mt-0.5">{netThisMonth >= 0 ? "net positive" : "net negative"}</p>
         </div>
       </div>
 
@@ -177,13 +209,13 @@ export default function Dashboard() {
 
       {/* Status breakdown — one card per doc type */}
       <div className="grid grid-cols-2 gap-3">
-        {DOC_TYPES.map(({ key, label, icon: Icon, path, statuses }) => {
+        {DOC_TYPES.map(({ key, label, icon: Icon, path, statuses }, idx) => {
           const total = (allData[key] || []).length;
           return (
             <button
               key={key}
               onClick={() => navigate(path)}
-              className="bg-white rounded-xl border border-gray-200 p-4 text-left hover:shadow-md transition-shadow"
+              className={`bg-white rounded-xl border border-gray-200 p-4 text-left hover:shadow-md transition-shadow ${idx === 4 ? "col-span-2" : ""}`}
             >
               {/* Doc type header */}
               <div className="flex items-center justify-between mb-3">
@@ -229,10 +261,10 @@ export default function Dashboard() {
                     <span className="font-mono text-xs text-blue-700 font-semibold">{r["Doc No"]}</span>
                     <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-500">{r._type}</span>
                   </div>
-                  <p className="text-xs text-gray-400 truncate">{r.Client || r.Supplier || "—"} · {fmtDate(r.Date)}</p>
+                  <p className="text-xs text-gray-400 truncate">{r._party || "—"} · {fmtDate(r.Date)}</p>
                 </div>
                 <div className="text-right shrink-0">
-                  {r.Total ? <p className="text-xs font-semibold text-gray-700">MYR {r.Total}</p> : null}
+                  {r._amt ? <p className="text-xs font-semibold text-gray-700">MYR {r._amt}</p> : null}
                   <div className="flex items-center gap-1 justify-end mt-0.5">
                     <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[r.Status || "Pending"]}`} />
                     <span className={`text-[10px] ${STATUS_TEXT[r.Status || "Pending"]}`}>{r.Status || "Pending"}</span>
