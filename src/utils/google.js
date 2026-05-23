@@ -94,7 +94,7 @@ const HEADERS = {
   Invoice:     ["Doc No", "Date", "Client", "Items", "Subtotal", "Tax", "Total", "Status", "Drive Link", "Notes", "Deposit Proof", "Balance Proof", "_raw"],
   PO:          ["Doc No", "Date", "Supplier", "Items", "Subtotal", "Tax", "Total", "Status", "Drive Link", "Notes", "Supplier Invoice", "Deposit Proof", "Balance Proof", "_raw"],
   DO:          ["Doc No", "Date", "Client", "Items", "Total Qty", "Status", "Drive Link", "Notes", "_raw"],
-  PV:          ["Doc No", "Date", "Paid To", "Purpose", "Amount", "Status", "Drive Link", "Notes", "_raw"],
+  PV:          ["Doc No", "Date", "Paid To", "Purpose", "Amount", "Status", "Drive Link", "Notes", "Receipt/Invoice", "Payment Proof", "_raw"],
   CreditNote:  ["Doc No", "Date", "Client", "Items", "Subtotal", "Tax", "Total", "Status", "Drive Link", "Notes", "_raw"],
   Receipt:     ["Doc No", "Date", "Client", "Amount", "Payment Method", "Invoice Ref", "Status", "Drive Link", "Notes", "_raw"],
 };
@@ -307,6 +307,57 @@ export async function ensureDepositBalanceCol(sheetId, sheetName, token) {
           body: JSON.stringify({ values: [["Balance Proof"]] }) }
       );
     }
+  } catch { /* skip */ }
+}
+
+// Patches existing PV sheets to add "Receipt/Invoice" and "Payment Proof" before "_raw".
+export async function ensurePVAttachmentCols(sheetId, token) {
+  const t = token || getToken();
+  try {
+    const res = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/PV!1:1`,
+      { headers: { Authorization: `Bearer ${t}` } }
+    );
+    const data = await res.json();
+    const headers = [...(data.values?.[0] || [])];
+
+    const hasReceipt  = headers.includes("Receipt/Invoice");
+    const hasPayment  = headers.includes("Payment Proof");
+    if (hasReceipt && hasPayment) return;
+
+    const rawIdx = headers.indexOf("_raw");
+    if (rawIdx < 0) return;
+
+    const gidRes = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}?fields=sheets.properties`,
+      { headers: { Authorization: `Bearer ${t}` } }
+    );
+    const gidData = await gidRes.json();
+    const gid = gidData.sheets?.find(s => s.properties.title === "PV")?.properties?.sheetId;
+    if (gid == null) return;
+
+    const insertCount = (!hasReceipt ? 1 : 0) + (!hasPayment ? 1 : 0);
+    await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}:batchUpdate`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${t}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        requests: [{ insertDimension: {
+          range: { sheetId: gid, dimension: "COLUMNS", startIndex: rawIdx, endIndex: rawIdx + insertCount },
+          inheritFromBefore: true,
+        }}],
+      }),
+    });
+
+    const newHeaders = [];
+    if (!hasReceipt) newHeaders.push("Receipt/Invoice");
+    if (!hasPayment) newHeaders.push("Payment Proof");
+    const startCol = String.fromCharCode(65 + rawIdx);
+    const endCol   = String.fromCharCode(65 + rawIdx + newHeaders.length - 1);
+    await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/PV!${startCol}1:${endCol}1?valueInputOption=RAW`,
+      { method: "PUT", headers: { Authorization: `Bearer ${t}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ values: [newHeaders] }) }
+    );
   } catch { /* skip */ }
 }
 
