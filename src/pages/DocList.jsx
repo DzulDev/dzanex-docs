@@ -11,7 +11,7 @@ const PAYMENT_METHODS = ["Bank Transfer", "Cash", "Cheque", "Online Transfer", "
 const STATUS_OPTIONS = {
   Quotation:  ["Pending", "Accepted", "Rejected"],
   Invoice:    ["Pending", "Paid", "Overdue"],
-  PO:         ["Pending", "Received", "Cancelled"],
+  PO:         ["Pending", "Paid", "Received", "Cancelled"],
   DO:         ["Pending", "Delivered", "Cancelled"],
   PV:         ["Pending", "Paid", "Cancelled"],
   CreditNote: ["Pending", "Applied", "Voided"],
