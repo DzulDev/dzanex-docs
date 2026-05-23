@@ -254,19 +254,21 @@ export default function Layout({ children }) {
                     <div className="bg-gray-50 rounded-xl p-3 text-xs">
                       <p className="font-semibold text-gray-700 mb-1">Formal supplier (sends goods based on PO)</p>
                       <div className="flex items-center gap-2 flex-wrap">
-                        {["PO", "→", "Goods received", "→", "PV via Convert"].map((s, i) => (
+                        {["PO", "→", "Deposit Paid", "→", "Received", "→", "PV via Convert"].map((s, i) => (
                           s === "→"
                             ? <span key={i} className="text-gray-300">→</span>
                             : <span key={i} className="bg-[#1B3A5C] text-white px-2.5 py-0.5 rounded-full font-medium">{s}</span>
                         ))}
                       </div>
+                      <p className="text-gray-400 mt-2">PO attachments: Supplier Invoice · Deposit Proof · Balance Proof</p>
                     </div>
                     <div className="bg-gray-50 rounded-xl p-3 text-xs">
                       <p className="font-semibold text-gray-700 mb-1">Shopee / hardware shop (direct cash purchase)</p>
                       <div className="flex items-center gap-2">
                         <span className="bg-[#1B3A5C] text-white px-2.5 py-0.5 rounded-full font-medium">PV directly</span>
-                        <span className="text-gray-400">— no PO needed</span>
+                        <span className="text-gray-400">— no PO needed, saves as Paid immediately</span>
                       </div>
+                      <p className="text-gray-400 mt-2">PV attachments: Receipt/Invoice · Payment Proof</p>
                     </div>
                   </div>
                 </div>
@@ -331,17 +333,18 @@ export default function Layout({ children }) {
                   <h3 className="font-semibold text-[#1B3A5C] mb-3">Status Meanings</h3>
                   <div className="bg-gray-50 rounded-xl divide-y divide-gray-100 text-xs">
                     {[
-                      ["Pending",   "Not yet paid / not yet actioned"],
-                      ["Paid",      "Money received (Invoice) or money sent (PV)"],
-                      ["Overdue",   "Invoice past due, still unpaid — shows as alert on Dashboard"],
-                      ["Accepted",  "Client agreed to the Quotation"],
-                      ["Rejected",  "Client rejected the Quotation"],
-                      ["Received",  "Goods received from supplier (PO)"],
-                      ["Delivered", "Goods delivered to client (DO)"],
-                      ["Cancelled", "Cancelled, ignored in all reports"],
-                      ["Issued",    "Receipt has been issued"],
-                      ["Applied",   "Credit Note has been used/applied by client"],
-                      ["Voided",    "Credit Note is void — no longer valid"],
+                      ["Pending",      "Not yet paid / not yet actioned"],
+                      ["Paid",         "Money received (Invoice) or money sent (PO/PV)"],
+                      ["Deposit Paid", "Deposit transferred to supplier — waiting for balance + delivery (PO)"],
+                      ["Overdue",      "Invoice past due, still unpaid — shows as alert on Dashboard"],
+                      ["Accepted",     "Client agreed to the Quotation"],
+                      ["Rejected",     "Client rejected the Quotation"],
+                      ["Received",     "Goods received from supplier (PO)"],
+                      ["Delivered",    "Goods delivered to client (DO)"],
+                      ["Cancelled",    "Cancelled, ignored in all reports"],
+                      ["Issued",       "Receipt has been issued"],
+                      ["Applied",      "Credit Note has been used/applied by client"],
+                      ["Voided",       "Credit Note is void — no longer valid"],
                     ].map(([status, desc]) => (
                       <div key={status} className="flex gap-4 px-4 py-2.5">
                         <span className="font-semibold text-gray-700 w-20 shrink-0">{status}</span>
@@ -356,9 +359,13 @@ export default function Layout({ children }) {
                   <h3 className="font-semibold text-[#1B3A5C] mb-3">Dashboard</h3>
                   <div className="bg-gray-50 rounded-xl divide-y divide-gray-100 text-xs">
                     {[
-                      ["Summary cards",    "Total docs, amount to collect (pending + overdue invoices), paid this month"],
-                      ["Action alerts",    "Clickable banners for overdue invoices, unpaid invoices, pending QTs, pending DOs — sorted by urgency"],
-                      ["Status breakdown", "Count per status for each doc type. Click any card to go to that list"],
+                      ["To Collect",       "Total unpaid (Pending + Overdue invoices)"],
+                      ["Income (Month)",   "Paid invoices this calendar month"],
+                      ["Expenses (Month)", "Paid PO + Paid PV this calendar month — money out"],
+                      ["Net (Month)",      "Income minus Expenses — green = profit, red = loss"],
+                      ["Cash Flow chart",  "Last 6 months — teal bars = Income, coral bars = Expenses"],
+                      ["Action alerts",    "Clickable banners for overdue/unpaid invoices, pending QTs and DOs — sorted by urgency"],
+                      ["Status breakdown", "Count per status for each doc type — click any card to open that list"],
                       ["Recent docs",      "Last 5 documents across all types, sorted by date"],
                     ].map(([item, desc]) => (
                       <div key={item} className="px-4 py-2.5">
