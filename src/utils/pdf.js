@@ -113,6 +113,8 @@ function addItemsTable(doc, items, y, showPrice) {
 
     // Track items that need bold-main + normal-bullets split rendering
     const splitBold = {};
+    // Description column inner width: A4(210) - margins(28) - fixed cols(96) - padding(6) = 80mm
+    const DESC_INNER_W = 80;
     const rows = items.map((item, i) => {
       const qtyDisplay = item.unit === "l/s" ? "l/s" : `${item.qty} ${item.unit || ""}`.trim();
       const bullets = item.notes && item.notes.trim()
@@ -121,14 +123,23 @@ function addItemsTable(doc, items, y, showPrice) {
       const desc = bullets.length
         ? item.description + "\n" + bullets.join("\n")
         : item.description;
+      const descStyles = { fontStyle: item.isBold ? "bold" : "normal" };
       if (item.isBold) {
         splitBold[i] = { main: item.description, bullets };
+        if (bullets.length) {
+          // Pre-calc cell height so didDrawCell text isn't clipped when bullets wrap
+          const cp = 3;
+          const mainLines = doc.splitTextToSize(item.description, DESC_INNER_W);
+          let neededH = cp * 2 + 3 + mainLines.length * 4.5;
+          bullets.forEach(b => { neededH += doc.splitTextToSize(b, DESC_INNER_W).length * 4.5; });
+          descStyles.minCellHeight = neededH;
+        }
       }
       const qty   = parseFloat(item.qty)      || 0;
       const price = parseFloat(item.unitPrice) || 0;
       return [
         i + 1,
-        { content: desc, styles: { fontStyle: item.isBold ? "bold" : "normal" } },
+        { content: desc, styles: descStyles },
         qtyDisplay,
         `RM ${price.toFixed(2)}`,
         `RM ${(qty * price).toFixed(2)}`,

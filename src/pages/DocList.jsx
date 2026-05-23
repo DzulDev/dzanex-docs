@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getConfig } from "../utils/storage";
-import { getRows, updateCell, getToken, getSheetGid, deleteSheetRow, deleteDriveFile, appendRow, ensureDriveFolder, uploadPDF, ensureSheetExists } from "../utils/google";
+import { getRows, updateCell, getToken, getSheetGid, deleteSheetRow, deleteDriveFile, appendRow, ensureDriveFolder, uploadPDF, ensureSheetExists, uploadFile } from "../utils/google";
 import { generateReceipt, generateDO } from "../utils/pdf";
 import { showToast } from "../utils/toast";
-import { ChevronDown, ExternalLink, FileText, Loader2, RefreshCw, Trash2, Receipt } from "lucide-react";
+import { ChevronDown, ExternalLink, FileText, Loader2, Paperclip, RefreshCw, Trash2, Receipt } from "lucide-react";
 
 const PAYMENT_METHODS = ["Bank Transfer", "Cash", "Cheque", "Online Transfer", "Credit Card", "Other"];
 
@@ -52,6 +52,10 @@ function poToPVPrefill(prefill, row) {
     notes:     "",
   };
 }
+
+// Column letters stay in sync with HEADERS in google.js
+const SUPPLIER_INV_COL  = "K"; // PO: index 10
+const PAYMENT_PROOF_COL = { PO: "L", Invoice: "K" }; // PO: index 11, Invoice: index 10
 
 const CONVERT_OPTIONS = {
   Quotation: [
@@ -205,6 +209,9 @@ export default function DocList({ sheetName, title }) {
   const [openConvert,   setOpenConvert]   = useState(null);
   const [convertPos,    setConvertPos]    = useState(null);
   const [receiptPrompt, setReceiptPrompt] = useState(null);
+  const [uploading,     setUploading]     = useState(null);
+  const [uploadTarget,  setUploadTarget]  = useState(null);
+  const fileInputRef = useRef(null);
 
   const navigate = useNavigate();
   const convertOptions = CONVERT_OPTIONS[sheetName] || [];
@@ -283,6 +290,35 @@ export default function DocList({ sheetName, title }) {
     navigate(opt.path, { state: { prefill: transformed } });
   }
 
+  // Generic attachment uploader — field is the sheet column header, col is the letter, label is display text
+  async function handleAttachUpload(row, file, field, col, label) {
+    const { sheetId, driveFolderId } = getConfig();
+    const token = getToken();
+    if (!sheetId || !token || !file) return;
+    setUploading(`${row._rowNum}-${field}`);
+    try {
+      const folderId = await ensureDriveFolder(sheetName, driveFolderId, token);
+      const bytes = await file.arrayBuffer();
+      const party = row["Client"] || row["Supplier"] || "Unknown";
+      const filename = `[${label}] ${row["Doc No"]} - ${party}.pdf`;
+      const link = await uploadFile(bytes, filename, file.type || "application/pdf", folderId, token);
+      await updateCell(sheetId, sheetName, row._rowNum, col, link, token);
+      setRows(prev => prev.map(r => r._rowNum === row._rowNum ? { ...r, [field]: link } : r));
+      showToast(`${label} uploaded`);
+    } catch (e) {
+      console.error(e);
+      showToast("Upload failed — " + e.message, "error");
+    } finally {
+      setUploading(null);
+      setUploadTarget(null);
+    }
+  }
+
+  function triggerUpload(row, field, col, label) {
+    setUploadTarget({ row, field, col, label });
+    fileInputRef.current?.click();
+  }
+
   function toggleStatus(e, row) {
     if (openStatus === row._rowNum) { closeAll(); return; }
     const rect = e.currentTarget.getBoundingClientRect();
@@ -304,7 +340,7 @@ export default function DocList({ sheetName, title }) {
   );
 
   const headers = rows[0]
-    ? Object.keys(rows[0]).filter(h => h !== "Drive Link" && !h.startsWith("_"))
+    ? Object.keys(rows[0]).filter(h => h !== "Drive Link" && h !== "Supplier Invoice" && h !== "Payment Proof" && !h.startsWith("_"))
     : [];
 
   const activeStatusRow  = rows.find(r => r._rowNum === openStatus);
@@ -418,6 +454,19 @@ export default function DocList({ sheetName, title }) {
         </div>
       )}
 
+      {/* Hidden file input for supplier invoice upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf,application/pdf"
+        className="hidden"
+        onChange={e => {
+          if (e.target.files?.[0] && uploadTarget)
+            handleAttachUpload(uploadTarget.row, e.target.files[0], uploadTarget.field, uploadTarget.col, uploadTarget.label);
+          e.target.value = "";
+        }}
+      />
+
       {/* Backdrop */}
       {(openStatus !== null || openConvert !== null) && (
         <div className="fixed inset-0 z-40" onClick={closeAll} />
@@ -522,6 +571,40 @@ export default function DocList({ sheetName, title }) {
                         No PDF
                       </div>
                     )}
+                    {sheetName === "PO" && (
+                      row["Supplier Invoice"] ? (
+                        <a href={row["Supplier Invoice"]} target="_blank" rel="noreferrer"
+                          className="inline-flex items-center justify-center gap-1 text-xs font-medium py-2 px-2.5 rounded-lg border border-orange-200 text-orange-600 hover:bg-orange-50 transition-colors"
+                          title="View supplier invoice">
+                          <Paperclip size={11} /> SI
+                        </a>
+                      ) : (
+                        <button
+                          disabled={!!uploading}
+                          onClick={() => triggerUpload(row, "Supplier Invoice", SUPPLIER_INV_COL, "Supplier Invoice")}
+                          className="inline-flex items-center justify-center gap-1 text-xs py-2 px-2.5 rounded-lg border border-dashed border-gray-300 text-gray-400 hover:border-orange-300 hover:text-orange-500 transition-colors disabled:opacity-50"
+                          title="Attach supplier invoice">
+                          {uploading === `${row._rowNum}-Supplier Invoice` ? <Loader2 size={11} className="animate-spin" /> : <Paperclip size={11} />}
+                        </button>
+                      )
+                    )}
+                    {(sheetName === "PO" || sheetName === "Invoice") && (
+                      row["Payment Proof"] ? (
+                        <a href={row["Payment Proof"]} target="_blank" rel="noreferrer"
+                          className="inline-flex items-center justify-center gap-1 text-xs font-medium py-2 px-2.5 rounded-lg border border-green-200 text-green-600 hover:bg-green-50 transition-colors"
+                          title="View payment proof">
+                          <Paperclip size={11} /> PP
+                        </a>
+                      ) : (
+                        <button
+                          disabled={!!uploading}
+                          onClick={() => triggerUpload(row, "Payment Proof", PAYMENT_PROOF_COL[sheetName], "Payment Proof")}
+                          className="inline-flex items-center justify-center gap-1 text-xs py-2 px-2.5 rounded-lg border border-dashed border-gray-300 text-gray-400 hover:border-green-300 hover:text-green-500 transition-colors disabled:opacity-50"
+                          title="Attach payment proof">
+                          {uploading === `${row._rowNum}-Payment Proof` ? <Loader2 size={11} className="animate-spin" /> : <Paperclip size={11} />}
+                        </button>
+                      )
+                    )}
                     {convertOptions.length > 0 && (
                       <button
                         onClick={e => toggleConvert(e, row)}
@@ -571,6 +654,8 @@ export default function DocList({ sheetName, title }) {
                       <th key={h} className="px-4 py-3 text-left whitespace-nowrap">{h}</th>
                     ))}
                     <th className="px-4 py-3 text-left">PDF</th>
+                    {sheetName === "PO" && <th className="px-4 py-3 text-left">Supplier Inv.</th>}
+                    {(sheetName === "PO" || sheetName === "Invoice") && <th className="px-4 py-3 text-left">Payment Proof</th>}
                     {convertOptions.length > 0 && <th className="px-4 py-3 text-left">Convert</th>}
                     <th className="px-4 py-3"></th>
                   </tr>
@@ -600,6 +685,48 @@ export default function DocList({ sheetName, title }) {
                           <span className="text-xs text-gray-300">—</span>
                         )}
                       </td>
+                      {sheetName === "PO" && (
+                        <td className="px-4 py-3">
+                          {row["Supplier Invoice"] ? (
+                            <a href={row["Supplier Invoice"]} target="_blank" rel="noreferrer"
+                              className="inline-flex items-center gap-1 text-xs font-medium text-orange-600 hover:text-orange-800 transition-colors">
+                              <Paperclip size={12} /> View
+                            </a>
+                          ) : (
+                            <button
+                              disabled={!!uploading}
+                              onClick={() => triggerUpload(row, "Supplier Invoice", SUPPLIER_INV_COL, "Supplier Invoice")}
+                              className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-orange-500 transition-colors disabled:opacity-50"
+                              title="Attach supplier invoice"
+                            >
+                              {uploading === `${row._rowNum}-Supplier Invoice`
+                                ? <Loader2 size={12} className="animate-spin" />
+                                : <><Paperclip size={12} /> Attach</>}
+                            </button>
+                          )}
+                        </td>
+                      )}
+                      {(sheetName === "PO" || sheetName === "Invoice") && (
+                        <td className="px-4 py-3">
+                          {row["Payment Proof"] ? (
+                            <a href={row["Payment Proof"]} target="_blank" rel="noreferrer"
+                              className="inline-flex items-center gap-1 text-xs font-medium text-green-600 hover:text-green-800 transition-colors">
+                              <Paperclip size={12} /> View
+                            </a>
+                          ) : (
+                            <button
+                              disabled={!!uploading}
+                              onClick={() => triggerUpload(row, "Payment Proof", PAYMENT_PROOF_COL[sheetName], "Payment Proof")}
+                              className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-green-500 transition-colors disabled:opacity-50"
+                              title="Attach payment proof"
+                            >
+                              {uploading === `${row._rowNum}-Payment Proof`
+                                ? <Loader2 size={12} className="animate-spin" />
+                                : <><Paperclip size={12} /> Attach</>}
+                            </button>
+                          )}
+                        </td>
+                      )}
                       {convertOptions.length > 0 && (
                         <td className="px-4 py-3">
                           <button

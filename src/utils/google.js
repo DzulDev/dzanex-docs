@@ -91,8 +91,8 @@ export async function createSpreadsheet(token) {
 
 const HEADERS = {
   Quotation:   ["Doc No", "Date", "Client", "Items", "Subtotal", "Tax", "Total", "Status", "Drive Link", "Notes", "_raw"],
-  Invoice:     ["Doc No", "Date", "Client", "Items", "Subtotal", "Tax", "Total", "Status", "Drive Link", "Notes", "_raw"],
-  PO:          ["Doc No", "Date", "Supplier", "Items", "Subtotal", "Tax", "Total", "Status", "Drive Link", "Notes", "_raw"],
+  Invoice:     ["Doc No", "Date", "Client", "Items", "Subtotal", "Tax", "Total", "Status", "Drive Link", "Notes", "Payment Proof", "_raw"],
+  PO:          ["Doc No", "Date", "Supplier", "Items", "Subtotal", "Tax", "Total", "Status", "Drive Link", "Notes", "Supplier Invoice", "Payment Proof", "_raw"],
   DO:          ["Doc No", "Date", "Client", "Items", "Total Qty", "Status", "Drive Link", "Notes", "_raw"],
   PV:          ["Doc No", "Date", "Paid To", "Purpose", "Amount", "Status", "Drive Link", "Notes", "_raw"],
   CreditNote:  ["Doc No", "Date", "Client", "Items", "Subtotal", "Tax", "Total", "Status", "Drive Link", "Notes", "_raw"],
@@ -298,6 +298,107 @@ export async function ensureDriveFolder(name, parentId, token) {
   await guardFetch(create, "ensureDriveFolder");
   const folder = await create.json();
   return folder.id;
+}
+
+// Patches existing PO sheets that were created before the "Supplier Invoice" column was added.
+// Inserts the column immediately before "_raw" so the column order stays consistent.
+export async function ensureSupplierInvoiceCol(sheetId, token) {
+  const t = token || getToken();
+  try {
+    const res = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/PO!1:1`,
+      { headers: { Authorization: `Bearer ${t}` } }
+    );
+    const data = await res.json();
+    const headers = data.values?.[0] || [];
+    if (headers.includes("Supplier Invoice")) return;
+    const rawIdx = headers.indexOf("_raw");
+    if (rawIdx < 0) return;
+    const gidRes = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}?fields=sheets.properties`,
+      { headers: { Authorization: `Bearer ${t}` } }
+    );
+    const gidData = await gidRes.json();
+    const gid = gidData.sheets?.find(s => s.properties.title === "PO")?.properties?.sheetId;
+    if (gid == null) return;
+    await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}:batchUpdate`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${t}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        requests: [{ insertDimension: {
+          range: { sheetId: gid, dimension: "COLUMNS", startIndex: rawIdx, endIndex: rawIdx + 1 },
+          inheritFromBefore: true,
+        }}],
+      }),
+    });
+    const col = String.fromCharCode(65 + rawIdx);
+    await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/PO!${col}1?valueInputOption=RAW`,
+      {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${t}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ values: [["Supplier Invoice"]] }),
+      }
+    );
+  } catch { /* skip */ }
+}
+
+// Patches Invoice and PO sheets that lack the "Payment Proof" column.
+// Accepts sheetName so only the relevant sheet is patched per DocPage load.
+export async function ensurePaymentProofCol(sheetId, sheetName, token) {
+  const t = token || getToken();
+  try {
+    const res = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${sheetName}!1:1`,
+      { headers: { Authorization: `Bearer ${t}` } }
+    );
+    const data = await res.json();
+    const headers = data.values?.[0] || [];
+    if (headers.includes("Payment Proof")) return;
+    const rawIdx = headers.indexOf("_raw");
+    if (rawIdx < 0) return;
+    const gidRes = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}?fields=sheets.properties`,
+      { headers: { Authorization: `Bearer ${t}` } }
+    );
+    const gidData = await gidRes.json();
+    const gid = gidData.sheets?.find(s => s.properties.title === sheetName)?.properties?.sheetId;
+    if (gid == null) return;
+    await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}:batchUpdate`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${t}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        requests: [{ insertDimension: {
+          range: { sheetId: gid, dimension: "COLUMNS", startIndex: rawIdx, endIndex: rawIdx + 1 },
+          inheritFromBefore: true,
+        }}],
+      }),
+    });
+    const col = String.fromCharCode(65 + rawIdx);
+    await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${sheetName}!${col}1?valueInputOption=RAW`,
+      {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${t}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ values: [["Payment Proof"]] }),
+      }
+    );
+  } catch { /* skip */ }
+}
+
+export async function uploadFile(bytes, filename, mimeType, folderId, token) {
+  const t = token || getToken();
+  const metadata = { name: filename, parents: [folderId], mimeType };
+  const form = new FormData();
+  form.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
+  form.append("file", new Blob([bytes], { type: mimeType }));
+  const res = await fetch(
+    "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink",
+    { method: "POST", headers: { Authorization: `Bearer ${t}` }, body: form }
+  );
+  await guardFetch(res, "uploadFile");
+  const data = await res.json();
+  return data.webViewLink || (data.id ? `https://drive.google.com/file/d/${data.id}/view` : null);
 }
 
 export async function uploadPDF(pdfBytes, filename, folderId, token) {

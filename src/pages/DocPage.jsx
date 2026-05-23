@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import DocForm from "../components/DocForm";
 import DocList from "./DocList";
 import { getConfig } from "../utils/storage";
-import { getToken, getNextDocNumber, appendRow, ensureDriveFolder, uploadPDF, ensureRawColumn, ensureSheetExists } from "../utils/google";
+import { getToken, getNextDocNumber, appendRow, ensureDriveFolder, uploadPDF, ensureRawColumn, ensureSheetExists, ensureSupplierInvoiceCol, ensurePaymentProofCol } from "../utils/google";
 import { showToast } from "../utils/toast";
 
 export default function DocPage({ title, prefix, sheetName, showPrice, showTax, showValidUntil, partyLabel, generateFn }) {
@@ -25,6 +25,8 @@ export default function DocPage({ title, prefix, sheetName, showPrice, showTax, 
       if (!sheetId || !token) { navigate("/login"); return; }
       ensureSheetExists(sheetId, sheetName, token); // fire-and-forget — creates sheet tab if missing
       ensureRawColumn(sheetId, token); // fire-and-forget — adds _raw header to existing sheets
+      if (sheetName === "PO") ensureSupplierInvoiceCol(sheetId, token);
+      if (sheetName === "PO" || sheetName === "Invoice") ensurePaymentProofCol(sheetId, sheetName, token);
       try {
         const no = await getNextDocNumber(sheetId, sheetName, prefix, token);
         setDocNo(no);
@@ -71,6 +73,14 @@ export default function DocPage({ title, prefix, sheetName, showPrice, showTax, 
         ? [formData.docNo, formData.date, formData.to.name, itemsSummary,
            formData.items.reduce((s, i) => s + Number(i.qty || 0), 0),
            "Pending", driveLink, formData.notes, rawJson]
+        : sheetName === "PO"
+        ? [formData.docNo, formData.date, formData.to.name, itemsSummary,
+           subtotal.toFixed(2), tax.toFixed(2), total.toFixed(2),
+           "Pending", driveLink, formData.notes, "", "", rawJson]  // "" = Supplier Invoice, "" = Payment Proof
+        : sheetName === "Invoice"
+        ? [formData.docNo, formData.date, formData.to.name, itemsSummary,
+           subtotal.toFixed(2), tax.toFixed(2), total.toFixed(2),
+           "Pending", driveLink, formData.notes, "", rawJson]      // "" = Payment Proof
         : [formData.docNo, formData.date, formData.to.name, itemsSummary,
            subtotal.toFixed(2), tax.toFixed(2), total.toFixed(2),
            "Pending", driveLink, formData.notes, rawJson];
