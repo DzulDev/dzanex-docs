@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import DocForm from "../components/DocForm";
 import DocList from "./DocList";
 import { getConfig } from "../utils/storage";
-import { getToken, getNextDocNumber, appendRow, ensureDriveFolder, uploadPDF, ensureRawColumn } from "../utils/google";
+import { getToken, getNextDocNumber, appendRow, ensureDriveFolder, uploadPDF, ensureRawColumn, ensureSheetExists } from "../utils/google";
 
 export default function DocPage({ title, prefix, sheetName, showPrice, showTax, showValidUntil, partyLabel, generateFn }) {
   const [docNo, setDocNo] = useState("");
@@ -22,6 +22,7 @@ export default function DocPage({ title, prefix, sheetName, showPrice, showTax, 
       if (logoDataUrl) setLogoUrl(logoDataUrl);
       if (stampDataUrl) setStampUrl(stampDataUrl);
       if (!sheetId || !token) { navigate("/login"); return; }
+      ensureSheetExists(sheetId, sheetName, token); // fire-and-forget — creates sheet tab if missing
       ensureRawColumn(sheetId, token); // fire-and-forget — adds _raw header to existing sheets
       try {
         const no = await getNextDocNumber(sheetId, sheetName, prefix, token);

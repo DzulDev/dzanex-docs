@@ -540,6 +540,108 @@ export function generatePaymentVoucher(docData, logoDataUrl, stampDataUrl) {
   return doc.output("arraybuffer");
 }
 
+export function generateCreditNote(docData, logoDataUrl, stampDataUrl) {
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  doc.__taxRate = Number(docData.taxRate) || 0;
+  const pageW = doc.internal.pageSize.getWidth();
+
+  let y = addHeader(doc, "Credit Note", docData.docNo, docData.date, logoDataUrl);
+
+  if (docData.subject?.trim()) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(...GRAY);
+    doc.text(`Related Invoice: ${docData.subject.trim()}`, pageW - M, y, { align: "right" });
+    y += 6;
+  }
+
+  y = addBillTo(doc, docData.to, docData.date, y);
+  const { finalY } = addItemsTable(doc, docData.items, y, true);
+  y = finalY + 10;
+
+  doc.setFont("helvetica", "italic");
+  doc.setFontSize(8);
+  doc.setTextColor(...GRAY);
+  doc.text("This credit note reduces the outstanding balance on the related invoice.", M, y);
+  y += 8;
+
+  if (docData.notes?.trim()) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(...DARK);
+    doc.text(`Notes: ${docData.notes}`, M, y);
+    y += 8;
+  }
+
+  addSignature(doc, y + 5, "invoice", stampDataUrl, docData.date);
+  addFooter(doc);
+  return doc.output("arraybuffer");
+}
+
+export function generateReceipt(docData, logoDataUrl, stampDataUrl) {
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const pageW = doc.internal.pageSize.getWidth();
+
+  let y = addHeader(doc, "Receipt", docData.docNo, docData.date, logoDataUrl);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(...BLACK);
+  doc.text("Received from:", M, y);
+  doc.text(`Date: ${format(new Date(docData.date), "d MMMM yyyy")}`, pageW - M, y, { align: "right" });
+  y += 6;
+
+  doc.setFillColor(...LGRAY);
+  doc.roundedRect(M, y - 2, pageW - M * 2, 12, 2, 2, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(...BLACK);
+  doc.text(docData.client || "(Not specified)", M + 4, y + 5);
+  y += 18;
+
+  const desc = docData.invoiceRef?.trim()
+    ? `Payment for Invoice ${docData.invoiceRef}`
+    : (docData.purpose?.trim() || "Payment Received");
+
+  autoTable(doc, {
+    startY: y,
+    head: [["Description", "Amount (RM)"]],
+    body: [[
+      desc,
+      { content: `RM ${parseFloat(docData.amount || 0).toFixed(2)}`, styles: { halign: "right", fontStyle: "bold" } },
+    ]],
+    foot: [[
+      { content: "Total Received", styles: { halign: "right", fontStyle: "bold", fillColor: [...MGRAY], textColor: [...BLACK] } },
+      { content: `RM ${parseFloat(docData.amount || 0).toFixed(2)}`, styles: { halign: "right", fontStyle: "bold", fillColor: [...MGRAY], textColor: [...BLACK] } },
+    ]],
+    showFoot: "lastPage",
+    styles:     { fontSize: 9, cellPadding: 4 },
+    headStyles: { fillColor: TEAL, textColor: 255, fontStyle: "bold" },
+    bodyStyles: { fillColor: [255, 255, 255] },
+    columnStyles: { 1: { cellWidth: 45, halign: "right" } },
+    margin: { left: M, right: M },
+  });
+  y = doc.lastAutoTable.finalY + 8;
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.5);
+  doc.setTextColor(...DARK);
+  if (docData.paymentMethod) { doc.text(`Payment Method: ${docData.paymentMethod}`, M, y); y += 5; }
+  if (docData.invoiceRef?.trim()) { doc.text(`Invoice Reference: ${docData.invoiceRef}`, M, y); y += 5; }
+  if (docData.reference?.trim()) { doc.text(`Transfer Reference: ${docData.reference}`, M, y); y += 5; }
+  y += 3;
+
+  doc.setFont("helvetica", "italic");
+  doc.setFontSize(9);
+  doc.setTextColor(...GRAY);
+  doc.text("Thank you for your payment.", M, y);
+  y += 8;
+
+  addSignature(doc, y + 5, "invoice", stampDataUrl, docData.date);
+  addFooter(doc);
+  return doc.output("arraybuffer");
+}
+
 export function generateDO(docData, logoDataUrl, stampDataUrl) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
 

@@ -70,7 +70,7 @@ export async function ensureSheet(sheetId, token) {
 
 export async function createSpreadsheet(token) {
   const t = token || getToken();
-  const sheets = ["Quotation", "Invoice", "PO", "DO", "PV"].map((title) => ({
+  const sheets = ["Quotation", "Invoice", "PO", "DO", "PV", "CreditNote", "Receipt"].map((title) => ({
     properties: { title },
   }));
   const body = {
@@ -90,11 +90,13 @@ export async function createSpreadsheet(token) {
 }
 
 const HEADERS = {
-  Quotation: ["Doc No", "Date", "Client", "Items", "Subtotal", "Tax", "Total", "Status", "Drive Link", "Notes", "_raw"],
-  Invoice:   ["Doc No", "Date", "Client", "Items", "Subtotal", "Tax", "Total", "Status", "Drive Link", "Notes", "_raw"],
-  PO:        ["Doc No", "Date", "Supplier", "Items", "Subtotal", "Tax", "Total", "Status", "Drive Link", "Notes", "_raw"],
-  DO:        ["Doc No", "Date", "Client", "Items", "Total Qty", "Status", "Drive Link", "Notes", "_raw"],
-  PV:        ["Doc No", "Date", "Paid To", "Purpose", "Amount", "Status", "Drive Link", "Notes", "_raw"],
+  Quotation:   ["Doc No", "Date", "Client", "Items", "Subtotal", "Tax", "Total", "Status", "Drive Link", "Notes", "_raw"],
+  Invoice:     ["Doc No", "Date", "Client", "Items", "Subtotal", "Tax", "Total", "Status", "Drive Link", "Notes", "_raw"],
+  PO:          ["Doc No", "Date", "Supplier", "Items", "Subtotal", "Tax", "Total", "Status", "Drive Link", "Notes", "_raw"],
+  DO:          ["Doc No", "Date", "Client", "Items", "Total Qty", "Status", "Drive Link", "Notes", "_raw"],
+  PV:          ["Doc No", "Date", "Paid To", "Purpose", "Amount", "Status", "Drive Link", "Notes", "_raw"],
+  CreditNote:  ["Doc No", "Date", "Client", "Items", "Subtotal", "Tax", "Total", "Status", "Drive Link", "Notes", "_raw"],
+  Receipt:     ["Doc No", "Date", "Client", "Amount", "Payment Method", "Invoice Ref", "Status", "Drive Link", "Notes", "_raw"],
 };
 
 export async function initSheetHeaders(sheetId, token) {

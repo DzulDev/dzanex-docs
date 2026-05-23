@@ -5,8 +5,11 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import DocPage from "./pages/DocPage";
 import PaymentVoucherPage from "./pages/PaymentVoucherPage";
+import ReceiptPage from "./pages/ReceiptPage";
 import Settings from "./pages/Settings";
-import { generateQuotation, generateInvoice, generatePO, generateDO } from "./utils/pdf";
+import CashFlow from "./pages/CashFlow";
+import Reports from "./pages/Reports";
+import { generateQuotation, generateInvoice, generatePO, generateDO, generateCreditNote } from "./utils/pdf";
 import { getToken } from "./utils/google";
 import { getConfig, saveConfig } from "./utils/storage";
 
@@ -73,6 +76,14 @@ export default function App() {
                     generateFn={generateDO} />
                 } />
                 <Route path="pv" element={<PaymentVoucherPage />} />
+                <Route path="cn" element={
+                  <DocPage key="cn" type="CreditNote" title="Credit Note" prefix="CN" sheetName="CreditNote"
+                    showPrice showTax partyLabel="Client"
+                    generateFn={generateCreditNote} />
+                } />
+                <Route path="receipt" element={<ReceiptPage />} />
+                <Route path="cashflow" element={<CashFlow />} />
+                <Route path="reports" element={<Reports />} />
                 <Route path="settings" element={<Settings />} />
               </Routes>
             </Layout>

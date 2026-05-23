@@ -1,32 +1,69 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getConfig } from "../utils/storage";
-import { getRows, updateCell, getToken, getSheetGid, deleteSheetRow, deleteDriveFile } from "../utils/google";
-import { ChevronDown, ExternalLink, FileText, Loader2, RefreshCw, Trash2 } from "lucide-react";
+import { getRows, updateCell, getToken, getSheetGid, deleteSheetRow, deleteDriveFile, appendRow, ensureDriveFolder, uploadPDF, ensureSheetExists } from "../utils/google";
+import { generateReceipt } from "../utils/pdf";
+import { ChevronDown, ExternalLink, FileText, Loader2, RefreshCw, Trash2, Receipt } from "lucide-react";
+
+const PAYMENT_METHODS = ["Bank Transfer", "Cash", "Cheque", "Online Transfer", "Credit Card", "Other"];
 
 const STATUS_OPTIONS = {
-  Quotation: ["Pending", "Accepted", "Rejected"],
-  Invoice:   ["Pending", "Paid", "Overdue"],
-  PO:        ["Pending", "Received", "Cancelled"],
-  DO:        ["Pending", "Delivered", "Cancelled"],
-  PV:        ["Pending", "Paid", "Cancelled"],
+  Quotation:  ["Pending", "Accepted", "Rejected"],
+  Invoice:    ["Pending", "Paid", "Overdue"],
+  PO:         ["Pending", "Received", "Cancelled"],
+  DO:         ["Pending", "Delivered", "Cancelled"],
+  PV:         ["Pending", "Paid", "Cancelled"],
+  CreditNote: ["Pending", "Applied", "Voided"],
+  Receipt:    ["Issued", "Voided"],
 };
 
 const STATUS_COL = {
-  Quotation: "H",
-  Invoice:   "H",
-  PO:        "H",
-  DO:        "F",
-  PV:        "F",
+  Quotation:  "H",
+  Invoice:    "H",
+  PO:         "H",
+  DO:         "F",
+  PV:         "F",
+  CreditNote: "H",
+  Receipt:    "G",
 };
+
+function invoiceToReceiptPrefill(prefill, row) {
+  return {
+    _type: "receipt",
+    client:    prefill?.to?.name || row["Client"] || "",
+    amount:    row["Total"] || "",
+    invoiceRef: row["Doc No"] || "",
+  };
+}
+
+function invoiceToCNPrefill(prefill, row) {
+  if (!prefill) return null;
+  return { ...prefill, subject: row["Doc No"] || prefill.docNo || "" };
+}
+
+function poToPVPrefill(prefill, row) {
+  return {
+    _type: "pv",
+    paidTo:    { name: prefill?.to?.name || row["Supplier"] || "", bank: "", accountNo: "" },
+    amount:    row["Total"] || "",
+    purpose:   `Payment for ${row["Doc No"]}`,
+    reference: "",
+    notes:     "",
+  };
+}
 
 const CONVERT_OPTIONS = {
   Quotation: [
-    { label: "Invoice",        path: "/invoice" },
-    { label: "Delivery Order", path: "/do" },
+    { label: "Invoice",           path: "/invoice" },
+    { label: "Delivery Order",    path: "/do" },
   ],
   Invoice: [
-    { label: "Delivery Order", path: "/do" },
+    { label: "Delivery Order",    path: "/do" },
+    { label: "Issue Receipt",     path: "/receipt", transform: invoiceToReceiptPrefill },
+    { label: "Issue Credit Note", path: "/cn",      transform: invoiceToCNPrefill },
+  ],
+  PO: [
+    { label: "Issue Payment Voucher", path: "/pv",  transform: poToPVPrefill },
   ],
 };
 
@@ -34,23 +71,69 @@ const STATUS_STYLE = {
   Pending:   "bg-yellow-50 text-yellow-700 border-yellow-200",
   Accepted:  "bg-green-50  text-green-700  border-green-200",
   Paid:      "bg-green-50  text-green-700  border-green-200",
+  Applied:   "bg-green-50  text-green-700  border-green-200",
   Received:  "bg-blue-50   text-blue-700   border-blue-200",
   Delivered: "bg-blue-50   text-blue-700   border-blue-200",
+  Issued:    "bg-blue-50   text-blue-700   border-blue-200",
   Rejected:  "bg-red-50    text-red-600    border-red-200",
   Overdue:   "bg-orange-50 text-orange-600 border-orange-200",
   Cancelled: "bg-gray-50   text-gray-500   border-gray-200",
+  Voided:    "bg-gray-50   text-gray-500   border-gray-200",
 };
 
 const STATUS_DOT = {
   Pending:   "bg-yellow-400",
   Accepted:  "bg-green-500",
   Paid:      "bg-green-500",
+  Applied:   "bg-green-500",
   Received:  "bg-blue-500",
   Delivered: "bg-blue-500",
+  Issued:    "bg-blue-500",
   Rejected:  "bg-red-400",
   Overdue:   "bg-orange-400",
   Cancelled: "bg-gray-300",
+  Voided:    "bg-gray-300",
 };
+
+async function autoCreateReceipt(row, paymentMethod, reference) {
+  const { sheetId, driveFolderId, logoDataUrl, stampDataUrl } = getConfig();
+  const token = getToken();
+  if (!sheetId || !token) return;
+
+  const invoiceDocNo = row["Doc No"] || "";
+  const parts = invoiceDocNo.split("-");
+  if (parts.length < 3) return;
+  const receiptDocNo = `REC-${parts[1]}-${parts[2]}`;
+
+  const prefill = getPrefill(row);
+  const today   = new Date().toISOString().split("T")[0];
+  const client  = prefill?.to?.name || row["Client"] || "";
+  const amount  = row["Total"] || "0.00";
+
+  const docData = {
+    docNo: receiptDocNo, date: today, client, amount,
+    paymentMethod: paymentMethod || "Bank Transfer",
+    invoiceRef: invoiceDocNo,
+    purpose: "", reference: reference || "", notes: "",
+  };
+
+  try {
+    await ensureSheetExists(sheetId, "Receipt", token);
+    const pdfBytes  = generateReceipt(docData, logoDataUrl || null, stampDataUrl || null);
+    const folderId  = await ensureDriveFolder("Receipt", driveFolderId, token);
+    const filename  = `${receiptDocNo} - ${client || "Unknown"}.pdf`;
+    const driveLink = await uploadPDF(pdfBytes, filename, folderId, token) || "";
+    const rawJson   = JSON.stringify(docData);
+    await appendRow(sheetId, "Receipt", [
+      receiptDocNo, today, client,
+      parseFloat(amount || 0).toFixed(2),
+      paymentMethod || "Bank Transfer", invoiceDocNo,
+      "Issued", driveLink, "", rawJson,
+    ], token);
+  } catch (e) {
+    console.error("Auto-create receipt failed:", e);
+  }
+}
 
 function getPrefill(row) {
   if (row["_raw"]) {
@@ -74,10 +157,11 @@ export default function DocList({ sheetName, title }) {
   const [deleting, setDeleting] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
 
-  const [openStatus,  setOpenStatus]  = useState(null);
-  const [statusPos,   setStatusPos]   = useState(null);
-  const [openConvert, setOpenConvert] = useState(null);
-  const [convertPos,  setConvertPos]  = useState(null);
+  const [openStatus,    setOpenStatus]    = useState(null);
+  const [statusPos,     setStatusPos]     = useState(null);
+  const [openConvert,   setOpenConvert]   = useState(null);
+  const [convertPos,    setConvertPos]    = useState(null);
+  const [receiptPrompt, setReceiptPrompt] = useState(null);
 
   const navigate = useNavigate();
   const convertOptions = CONVERT_OPTIONS[sheetName] || [];
@@ -113,6 +197,9 @@ export default function DocList({ sheetName, title }) {
     try {
       await updateCell(sheetId, sheetName, row._rowNum, col, newStatus, token);
       setRows(prev => prev.map(r => r._rowNum === row._rowNum ? { ...r, Status: newStatus } : r));
+      if (sheetName === "Invoice" && newStatus === "Paid") {
+        setReceiptPrompt({ row, paymentMethod: "Bank Transfer", reference: "" });
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -141,10 +228,11 @@ export default function DocList({ sheetName, title }) {
     }
   }
 
-  function handleConvert(row, path) {
+  function handleConvert(row, opt) {
     const prefill = getPrefill(row);
+    const transformed = opt.transform ? opt.transform(prefill, row) : prefill;
     closeAll();
-    navigate(path, { state: { prefill } });
+    navigate(opt.path, { state: { prefill: transformed } });
   }
 
   function toggleStatus(e, row) {
@@ -197,6 +285,66 @@ export default function DocList({ sheetName, title }) {
 
   return (
     <div>
+      {/* Receipt auto-create prompt */}
+      {receiptPrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
+            <div className="flex items-center gap-3 mb-1">
+              <div className="w-9 h-9 rounded-full bg-[#57A9A9]/10 flex items-center justify-center shrink-0">
+                <Receipt size={16} className="text-[#57A9A9]" />
+              </div>
+              <h3 className="font-semibold text-gray-800">Create Receipt?</h3>
+            </div>
+            <p className="text-xs text-gray-400 mb-5 ml-12">
+              Auto-generate receipt for <span className="font-mono font-semibold text-blue-700">{receiptPrompt.row["Doc No"]}</span>
+            </p>
+
+            <div className="space-y-3">
+              <div>
+                <label className="label">Payment Method</label>
+                <select
+                  className="input"
+                  value={receiptPrompt.paymentMethod}
+                  onChange={e => setReceiptPrompt(p => ({ ...p, paymentMethod: e.target.value }))}
+                >
+                  {PAYMENT_METHODS.map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="label">
+                  Transfer Reference{" "}
+                  <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <input
+                  className="input"
+                  placeholder="e.g. TRF20250522001"
+                  value={receiptPrompt.reference}
+                  onChange={e => setReceiptPrompt(p => ({ ...p, reference: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 mt-5">
+              <button
+                onClick={() => setReceiptPrompt(null)}
+                className="flex-1 px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+              >
+                Skip
+              </button>
+              <button
+                onClick={() => {
+                  autoCreateReceipt(receiptPrompt.row, receiptPrompt.paymentMethod, receiptPrompt.reference);
+                  setReceiptPrompt(null);
+                }}
+                className="flex-1 px-4 py-2 rounded-lg bg-[#1B3A5C] text-white text-sm font-medium hover:bg-[#1B3A5C]/90 transition-colors"
+              >
+                Create Receipt
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Backdrop */}
       {(openStatus !== null || openConvert !== null) && (
         <div className="fixed inset-0 z-40" onClick={closeAll} />
@@ -234,7 +382,7 @@ export default function DocList({ sheetName, title }) {
           {convertOptions.map(opt => (
             <button
               key={opt.path}
-              onClick={() => handleConvert(activeConvertRow, opt.path)}
+              onClick={() => handleConvert(activeConvertRow, opt)}
               className="w-full text-left px-3 py-2.5 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 transition-colors"
             >
               <FileText size={13} className="text-[#57A9A9] shrink-0" />
