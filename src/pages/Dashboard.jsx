@@ -1,43 +1,77 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FileText, Receipt, ShoppingCart, Truck, RefreshCw, TrendingUp, Wallet, FileCheck } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { getConfig } from "../utils/storage";
 import { getRows, getToken } from "../utils/google";
 
 const DOC_TYPES = [
   { key: "Quotation", label: "Quotation",       icon: FileText,     path: "/quotation", statuses: ["Pending", "Accepted", "Rejected"] },
   { key: "Invoice",   label: "Invoice",          icon: Receipt,      path: "/invoice",   statuses: ["Pending", "Paid", "Overdue"] },
-  { key: "PO",        label: "Purchase Order",   icon: ShoppingCart, path: "/po",        statuses: ["Pending", "Received", "Cancelled"] },
+  { key: "PO",        label: "Purchase Order",   icon: ShoppingCart, path: "/po",        statuses: ["Pending", "Deposit Paid", "Paid", "Received", "Cancelled"] },
   { key: "DO",        label: "Delivery Order",   icon: Truck,        path: "/do",        statuses: ["Pending", "Delivered", "Cancelled"] },
   { key: "PV",        label: "Payment Voucher",  icon: Wallet,       path: "/pv",        statuses: ["Pending", "Paid", "Cancelled"] },
   { key: "Receipt",   label: "Receipt",          icon: FileCheck,    path: "/receipt",   statuses: ["Issued", "Voided"] },
 ];
 
 const STATUS_DOT = {
-  Pending:   "bg-yellow-400",
-  Accepted:  "bg-green-500",
-  Paid:      "bg-green-500",
-  Received:  "bg-blue-500",
-  Delivered: "bg-blue-500",
-  Rejected:  "bg-red-400",
-  Overdue:   "bg-orange-400",
-  Cancelled: "bg-gray-300",
-  Issued:    "bg-blue-500",
-  Voided:    "bg-gray-300",
+  Pending:        "bg-yellow-400",
+  Accepted:       "bg-green-500",
+  Paid:           "bg-green-500",
+  "Deposit Paid": "bg-cyan-500",
+  Received:       "bg-blue-500",
+  Delivered:      "bg-blue-500",
+  Rejected:       "bg-red-400",
+  Overdue:        "bg-orange-400",
+  Cancelled:      "bg-gray-300",
+  Issued:         "bg-blue-500",
+  Voided:         "bg-gray-300",
 };
 
 const STATUS_TEXT = {
-  Pending:   "text-yellow-700",
-  Accepted:  "text-green-700",
-  Paid:      "text-green-700",
-  Received:  "text-blue-700",
-  Delivered: "text-blue-700",
-  Rejected:  "text-red-600",
-  Overdue:   "text-orange-600",
-  Cancelled: "text-gray-400",
-  Issued:    "text-blue-700",
-  Voided:    "text-gray-400",
+  Pending:        "text-yellow-700",
+  Accepted:       "text-green-700",
+  Paid:           "text-green-700",
+  "Deposit Paid": "text-cyan-700",
+  Received:       "text-blue-700",
+  Delivered:      "text-blue-700",
+  Rejected:       "text-red-600",
+  Overdue:        "text-orange-600",
+  Cancelled:      "text-gray-400",
+  Issued:         "text-blue-700",
+  Voided:         "text-gray-400",
 };
+
+function getMonthlyData(allData) {
+  const now = new Date();
+  return Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+    const prefix = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const label = d.toLocaleString("default", { month: "short" });
+    const income = allData.Invoice
+      .filter(r => r.Status === "Paid" && (r.Date || "").startsWith(prefix))
+      .reduce((s, r) => s + (parseFloat(r.Total) || 0), 0);
+    const expenses = [
+      ...allData.PO.filter(r => r.Status === "Paid" && (r.Date || "").startsWith(prefix)).map(r => parseFloat(r.Total) || 0),
+      ...allData.PV.filter(r => r.Status === "Paid" && (r.Date || "").startsWith(prefix)).map(r => parseFloat(r.Amount) || 0),
+    ].reduce((s, n) => s + n, 0);
+    return { label, Income: income, Expenses: expenses };
+  });
+}
+
+function CashflowTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg shadow-lg px-3 py-2 text-xs">
+      <p className="font-semibold text-gray-700 mb-1">{label}</p>
+      {payload.map(p => (
+        <p key={p.name} style={{ color: p.color }} className="font-medium">
+          {p.name}: MYR {Number(p.value).toLocaleString("en-MY", { minimumFractionDigits: 2 })}
+        </p>
+      ))}
+    </div>
+  );
+}
 
 function fmtDate(d) {
   if (!d) return "";
@@ -196,6 +230,25 @@ export default function Dashboard() {
           <p className="text-[11px] text-gray-400 mb-1">Net (Month)</p>
           <p className={`text-sm font-bold leading-tight ${netThisMonth >= 0 ? "text-[#57A9A9]" : "text-red-500"}`}>{fmtMYR(netThisMonth)}</p>
           <p className="text-[10px] text-gray-400 mt-0.5">{netThisMonth >= 0 ? "net positive" : "net negative"}</p>
+        </div>
+      </div>
+
+      {/* Cash flow chart */}
+      <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <p className="text-xs font-semibold text-gray-600 mb-3">Cash Flow — Last 6 Months</p>
+        <ResponsiveContainer width="100%" height={160}>
+          <BarChart data={getMonthlyData(allData)} barCategoryGap="30%" barGap={2}>
+            <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} width={40}
+              tickFormatter={v => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v} />
+            <Tooltip content={<CashflowTooltip />} cursor={{ fill: "#f3f4f6" }} />
+            <Bar dataKey="Income"   fill="#57A9A9" radius={[3,3,0,0]} />
+            <Bar dataKey="Expenses" fill="#E8917A" radius={[3,3,0,0]} />
+          </BarChart>
+        </ResponsiveContainer>
+        <div className="flex items-center gap-4 mt-2 justify-end">
+          <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-[#57A9A9] shrink-0" /><span className="text-[10px] text-gray-400">Income</span></div>
+          <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-[#E8917A] shrink-0" /><span className="text-[10px] text-gray-400">Expenses</span></div>
         </div>
       </div>
 
