@@ -235,21 +235,27 @@ export default function DocList({ sheetName, title }) {
     const { sheetId } = getConfig();
     const token = getToken();
     const col = STATUS_COL[sheetName];
-    if (!col || !sheetId || !token) return;
+    if (!col || !sheetId || !token) {
+      showToast("Session expired — please sign in again.", "error");
+      navigate("/login");
+      return;
+    }
     closeAll();
     setUpdating(row._rowNum);
     try {
       await updateCell(sheetId, sheetName, row._rowNum, col, newStatus, token);
-      setRows(prev => prev.map(r => r._rowNum === row._rowNum ? { ...r, Status: newStatus } : r));
-      if (sheetName === "Invoice" && newStatus === "Paid") {
-        const localDate = new Date();
-        const dateStr = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, "0")}-${String(localDate.getDate()).padStart(2, "0")}`;
-        setReceiptPrompt({ row, paymentMethod: "Bank Transfer", reference: "", date: dateStr, createDO: false });
-      }
     } catch (e) {
       console.error(e);
-    } finally {
+      showToast("Status update failed. Try again.", "error");
       setUpdating(null);
+      return;
+    }
+    setRows(prev => prev.map(r => r._rowNum === row._rowNum ? { ...r, Status: newStatus } : r));
+    setUpdating(null);
+    if (sheetName === "Invoice" && newStatus === "Paid") {
+      const localDate = new Date();
+      const dateStr = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, "0")}-${String(localDate.getDate()).padStart(2, "0")}`;
+      setReceiptPrompt({ row, paymentMethod: "Bank Transfer", reference: "", date: dateStr, createDO: false });
     }
   }
 
