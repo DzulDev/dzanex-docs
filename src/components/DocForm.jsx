@@ -2,6 +2,7 @@ import { useState } from "react";
 import { format } from "date-fns";
 import { Loader2, Save, Eye } from "lucide-react";
 import ItemsTable from "./ItemsTable";
+import { fmt2 } from "../utils/fmt";
 
 const DEFAULT_TERMS = [
   { enabled: true, text: "A deposit must be paid to proceed with purchasing items and project execution." },
@@ -204,17 +205,17 @@ export default function DocForm({
           <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
             <div className="flex justify-between text-sm text-gray-600">
               <span>Subtotal</span>
-              <span>MYR {subtotal.toFixed(2)}</span>
+              <span>MYR {fmt2(subtotal)}</span>
             </div>
             {Number(form.taxRate) > 0 && (
               <div className="flex justify-between text-sm text-gray-600">
                 <span>Tax ({form.taxRate}%)</span>
-                <span>MYR {tax.toFixed(2)}</span>
+                <span>MYR {fmt2(tax)}</span>
               </div>
             )}
             <div className="border-t pt-3 flex justify-between font-bold text-gray-800">
               <span>TOTAL</span>
-              <span>MYR {total.toFixed(2)}</span>
+              <span>MYR {fmt2(total)}</span>
             </div>
           </div>
         )}
