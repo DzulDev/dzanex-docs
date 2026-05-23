@@ -25,8 +25,12 @@ export default function DocPage({ title, prefix, sheetName, showPrice, showTax, 
       if (!sheetId || !token) { navigate("/login"); return; }
       ensureSheetExists(sheetId, sheetName, token); // fire-and-forget — creates sheet tab if missing
       ensureRawColumn(sheetId, token); // fire-and-forget — adds _raw header to existing sheets
-      if (sheetName === "PO") ensureSupplierInvoiceCol(sheetId, token);
-      if (sheetName === "PO" || sheetName === "Invoice") ensurePaymentProofCol(sheetId, sheetName, token);
+      // Chain sequentially — PP migration must run after SI so column positions are correct
+      if (sheetName === "PO") {
+        ensureSupplierInvoiceCol(sheetId, token).then(() => ensurePaymentProofCol(sheetId, sheetName, token));
+      } else if (sheetName === "Invoice") {
+        ensurePaymentProofCol(sheetId, sheetName, token);
+      }
       try {
         const no = await getNextDocNumber(sheetId, sheetName, prefix, token);
         setDocNo(no);
@@ -55,7 +59,7 @@ export default function DocPage({ title, prefix, sheetName, showPrice, showTax, 
     setSaving(true);
     try {
       const rootId = driveFolderId;
-      const folderId = await ensureDriveFolder(sheetName, rootId, token);
+      const folderId = await ensureDriveFolder(formData.to.name || sheetName, rootId, token);
 
       const filename = `${formData.docNo} - ${formData.to.name || "Unknown"}.pdf`;
       const driveLink = await uploadPDF(pdfBytes, filename, folderId, token) || "";

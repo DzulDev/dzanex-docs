@@ -295,9 +295,9 @@ export default function DocList({ sheetName, title }) {
     if (!sheetId || !token || !file) return;
     setUploading(`${row._rowNum}-${field}`);
     try {
-      const folderId = await ensureDriveFolder(sheetName, driveFolderId, token);
-      const bytes = await file.arrayBuffer();
       const party = row["Client"] || row["Supplier"] || "Unknown";
+      const folderId = await ensureDriveFolder(party, driveFolderId, token);
+      const bytes = await file.arrayBuffer();
       const filename = `[${label}] ${row["Doc No"]} - ${party}.pdf`;
       const link = await uploadFile(bytes, filename, file.type || "application/pdf", folderId, token);
       await updateCell(sheetId, sheetName, row._rowNum, col, link, token);
