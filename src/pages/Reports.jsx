@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { RefreshCw, Printer } from "lucide-react";
 import { getConfig } from "../utils/storage";
-import { getRows, getToken } from "../utils/google";
+import { getRows, getToken, ensureSheetHasHeaders } from "../utils/google";
 import { fmtMYR } from "../utils/fmt";
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -494,13 +494,17 @@ export default function Reports() {
     const token = getToken();
     if (!sheetId || !token) { setLoading(false); return; }
     try {
-      const [invRows, qtRows, poRows, doRows, pvRows] = await Promise.all([
+      await Promise.allSettled(["Invoice", "Quotation", "PO", "DO", "PV"].map(s => ensureSheetHasHeaders(sheetId, s, token)));
+      const results = await Promise.allSettled([
         getRows(sheetId, "Invoice",   token),
         getRows(sheetId, "Quotation", token),
         getRows(sheetId, "PO",        token),
         getRows(sheetId, "DO",        token),
         getRows(sheetId, "PV",        token),
       ]);
+      const expired = results.find(r => r.status === "rejected" && r.reason?.httpStatus === 401);
+      if (expired) { navigate("/login"); return; }
+      const [invRows, qtRows, poRows, doRows, pvRows] = results.map(r => r.status === "fulfilled" ? r.value : []);
       setData({ invRows, qtRows, poRows, doRows, pvRows });
     } catch (e) {
       if (e.httpStatus === 401) navigate("/login");
