@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getConfig } from "../utils/storage";
-import { getRows, updateCell, getToken, getSheetGid, deleteSheetRow, deleteDriveFile, appendRow, ensureDriveFolder, uploadPDF, ensureSheetExists, uploadFile, getColLetter } from "../utils/google";
+import { getRows, updateCell, getToken, getSheetGid, deleteSheetRow, deleteDriveFile, appendRow, ensureDriveFolder, uploadPDF, ensureSheetExists, uploadFile, getColLetter, ensureSheetHasHeaders } from "../utils/google";
 import { generateReceipt, generateDO } from "../utils/pdf";
 import { showToast } from "../utils/toast";
 import { ChevronDown, ExternalLink, FileText, Loader2, Paperclip, RefreshCw, Trash2, Receipt } from "lucide-react";
@@ -285,6 +285,7 @@ export default function DocList({ sheetName, title }) {
       const { sheetId } = getConfig();
       const token = getToken();
       if (!sheetId || !token) return;
+      await ensureSheetHasHeaders(sheetId, sheetName, token);
       const data = await getRows(sheetId, sheetName, token);
       setRows(data.reverse());
     } catch (e) {
