@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { RefreshCw, Printer } from "lucide-react";
 import { getConfig } from "../utils/storage";
-import { getRows, getToken } from "../utils/google";
+import { getRows, getToken, ensureSheetHasHeaders } from "../utils/google";
 import { fmtMYR } from "../utils/fmt";
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -24,11 +24,15 @@ export default function CashFlow() {
     const token = getToken();
     if (!sheetId || !token) { setLoading(false); return; }
     try {
-      const [invRows, poRows, pvRows] = await Promise.all([
+      await Promise.allSettled(["Invoice", "PO", "PV"].map(s => ensureSheetHasHeaders(sheetId, s, token)));
+      const results = await Promise.allSettled([
         getRows(sheetId, "Invoice", token),
         getRows(sheetId, "PO",      token),
         getRows(sheetId, "PV",      token),
       ]);
+      const expired = results.find(r => r.status === "rejected" && r.reason?.httpStatus === 401);
+      if (expired) { navigate("/login"); return; }
+      const [invRows, poRows, pvRows] = results.map(r => r.status === "fulfilled" ? r.value : []);
       setData({ invRows, poRows, pvRows });
     } catch (e) {
       if (e.httpStatus === 401) navigate("/login");
