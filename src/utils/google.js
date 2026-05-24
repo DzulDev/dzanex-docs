@@ -315,6 +315,9 @@ export async function ensureDepositBalanceCol(sheetId, sheetName, token) {
 // data row as headers, causing all field lookups to return undefined.
 // This inserts a blank row at position 0 and writes the correct headers if A1 != "Doc No".
 export async function ensureSheetHasHeaders(sheetId, sheetName, token) {
+  const cacheKey = `dzanex_hdr_${sheetId}_${sheetName}`;
+  if (localStorage.getItem(cacheKey)) return; // already confirmed OK this session
+
   const t = token || getToken();
   const headers = HEADERS[sheetName];
   if (!headers) return;
@@ -325,7 +328,7 @@ export async function ensureSheetHasHeaders(sheetId, sheetName, token) {
     );
     const data = await res.json();
     const a1 = data.values?.[0]?.[0];
-    if (a1 === "Doc No") return; // Already has correct headers
+    if (a1 === "Doc No") { localStorage.setItem(cacheKey, "1"); return; } // confirmed OK, cache it
 
     if (!a1) {
       // Empty sheet — just write headers to row 1
@@ -367,6 +370,7 @@ export async function ensureSheetHasHeaders(sheetId, sheetName, token) {
         }
       );
     }
+    localStorage.setItem(cacheKey, "1");
   } catch { /* skip */ }
 }
 
