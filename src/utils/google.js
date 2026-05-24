@@ -310,27 +310,27 @@ export async function ensureDepositBalanceCol(sheetId, sheetName, token) {
   } catch { /* skip */ }
 }
 
-// Ensures the PV sheet has a proper "Doc No" header row.
-// If the spreadsheet tab was created without headers (e.g. via createSpreadsheet),
-// the first data row would be misread as headers by getRows, causing allData.PV = [].
+// Ensures any sheet has a proper "Doc No" header row.
+// Sheets created via createSpreadsheet() have no headers — getRows misreads the first
+// data row as headers, causing all field lookups to return undefined.
 // This inserts a blank row at position 0 and writes the correct headers if A1 != "Doc No".
-export async function ensurePVSheetHeaders(sheetId, token) {
+export async function ensureSheetHasHeaders(sheetId, sheetName, token) {
   const t = token || getToken();
+  const headers = HEADERS[sheetName];
+  if (!headers) return;
   try {
     const res = await fetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/PV!A1`,
+      `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${sheetName}!A1`,
       { headers: { Authorization: `Bearer ${t}` } }
     );
     const data = await res.json();
     const a1 = data.values?.[0]?.[0];
     if (a1 === "Doc No") return; // Already has correct headers
 
-    const headers = HEADERS.PV;
-
     if (!a1) {
       // Empty sheet — just write headers to row 1
       await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/PV!A1?valueInputOption=RAW`,
+        `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${sheetName}!A1?valueInputOption=RAW`,
         {
           method: "PUT",
           headers: { Authorization: `Bearer ${t}`, "Content-Type": "application/json" },
@@ -344,7 +344,7 @@ export async function ensurePVSheetHeaders(sheetId, token) {
         { headers: { Authorization: `Bearer ${t}` } }
       );
       const gidData = await gidRes.json();
-      const gid = gidData.sheets?.find(s => s.properties.title === "PV")?.properties?.sheetId;
+      const gid = gidData.sheets?.find(s => s.properties.title === sheetName)?.properties?.sheetId;
       if (gid == null) return;
 
       await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}:batchUpdate`, {
@@ -359,7 +359,7 @@ export async function ensurePVSheetHeaders(sheetId, token) {
       });
 
       await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/PV!A1?valueInputOption=RAW`,
+        `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${sheetName}!A1?valueInputOption=RAW`,
         {
           method: "PUT",
           headers: { Authorization: `Bearer ${t}`, "Content-Type": "application/json" },
@@ -368,6 +368,11 @@ export async function ensurePVSheetHeaders(sheetId, token) {
       );
     }
   } catch { /* skip */ }
+}
+
+// Kept for backward compatibility — delegates to the generic function
+export async function ensurePVSheetHeaders(sheetId, token) {
+  return ensureSheetHasHeaders(sheetId, "PV", token);
 }
 
 // Patches existing PV sheets to add "Receipt/Invoice" and "Payment Proof" before "_raw".

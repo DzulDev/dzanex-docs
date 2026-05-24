@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { FileText, Receipt, ShoppingCart, Truck, RefreshCw, TrendingUp, Wallet, FileCheck } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { getConfig } from "../utils/storage";
-import { getRows, getToken } from "../utils/google";
+import { getRows, getToken, ensureSheetHasHeaders } from "../utils/google";
 import { fmtMYR } from "../utils/fmt";
 
 const DOC_TYPES = [
@@ -93,6 +93,13 @@ export default function Dashboard() {
     const token = getToken();
     if (!sheetId || !token) { setLoading(false); return; }
     try {
+      // Fix sheets that were created without a header row (createSpreadsheet bug)
+      await Promise.allSettled(
+        ["Quotation", "Invoice", "PO", "DO", "PV", "Receipt"].map(s =>
+          ensureSheetHasHeaders(sheetId, s, token)
+        )
+      );
+
       const results = await Promise.allSettled([
         getRows(sheetId, "Quotation", token),
         getRows(sheetId, "Invoice",   token),
@@ -105,7 +112,7 @@ export default function Dashboard() {
       const expired = results.find(r => r.status === "rejected" && r.reason?.httpStatus === 401);
       if (expired) { navigate("/login"); return; }
       const [qt, inv, po, doRows, pv, rec] = results.map(r => r.status === "fulfilled" ? r.value : []);
-      setAllData({ Quotation: qt, Invoice: inv, PO: po, DO: doRows, PV: pv, Receipt: rec });
+setAllData({ Quotation: qt, Invoice: inv, PO: po, DO: doRows, PV: pv, Receipt: rec });
     } catch (e) {
       console.error(e);
       if (e.httpStatus === 401) navigate("/login");
