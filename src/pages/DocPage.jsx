@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import DocForm from "../components/DocForm";
 import DocList from "./DocList";
 import { getConfig } from "../utils/storage";
-import { getToken, getNextDocNumber, appendRow, ensureDriveFolder, uploadPDF, ensureRawColumn, ensureSheetExists, ensureSupplierInvoiceCol, ensureDepositBalanceCol } from "../utils/google";
+import { getToken, getNextDocNumber, appendRow, ensureDriveFolder, uploadPDF, ensureRawColumn, ensureSheetExists, ensureSupplierInvoiceCol, ensureDepositBalanceCol, ensureSheetHasHeaders } from "../utils/google";
 import { showToast } from "../utils/toast";
 
 export default function DocPage({ title, prefix, sheetName, showPrice, showTax, showValidUntil, partyLabel, generateFn }) {
@@ -25,6 +25,7 @@ export default function DocPage({ title, prefix, sheetName, showPrice, showTax, 
       if (!sheetId || !token) { navigate("/login"); return; }
       ensureSheetExists(sheetId, sheetName, token); // fire-and-forget — creates sheet tab if missing
       ensureRawColumn(sheetId, token); // fire-and-forget — adds _raw header to existing sheets
+      await ensureSheetHasHeaders(sheetId, sheetName, token);
       // Chain sequentially — PP migration must run after SI so column positions are correct
       if (sheetName === "PO") {
         ensureSupplierInvoiceCol(sheetId, token).then(() => ensureDepositBalanceCol(sheetId, sheetName, token));

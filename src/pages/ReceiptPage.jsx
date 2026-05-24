@@ -5,7 +5,7 @@ import DocList from "./DocList";
 import { getConfig } from "../utils/storage";
 import {
   getToken, getNextDocNumber, appendRow,
-  ensureDriveFolder, uploadPDF, ensureSheetExists,
+  ensureDriveFolder, uploadPDF, ensureSheetExists, ensureSheetHasHeaders,
 } from "../utils/google";
 import { generateReceipt } from "../utils/pdf";
 import { showToast } from "../utils/toast";
@@ -43,6 +43,7 @@ export default function ReceiptPage() {
       if (!sheetId || !token) { navigate("/login"); return; }
       try {
         await ensureSheetExists(sheetId, "Receipt", token);
+        await ensureSheetHasHeaders(sheetId, "Receipt", token);
         const no = await getNextDocNumber(sheetId, "Receipt", "REC", token);
         setDocNo(no);
       } catch (e) {
