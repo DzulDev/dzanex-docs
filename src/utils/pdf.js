@@ -647,6 +647,14 @@ export function generateReceipt(docData, logoDataUrl, stampDataUrl) {
   if (docData.reference?.trim()) { doc.text(`Transfer Reference: ${docData.reference}`, M, y); y += 5; }
   y += 3;
 
+  if (docData.notes?.trim()) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.5);
+    doc.setTextColor(...DARK);
+    doc.text(`Notes: ${docData.notes}`, M, y);
+    y += 6;
+  }
+
   doc.setFont("helvetica", "italic");
   doc.setFontSize(9);
   doc.setTextColor(...GRAY);
