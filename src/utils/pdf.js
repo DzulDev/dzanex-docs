@@ -157,7 +157,7 @@ function addItemsTable(doc, items, y, showPrice) {
       body: rows,
       foot: [[
         { content: "Total Amount", colSpan: 4, styles: { halign: "right", fontStyle: "bold", fillColor: [...MGRAY], textColor: [...BLACK] } },
-        { content: rm(total), styles: { fontStyle: "bold", fillColor: [...MGRAY], textColor: [...BLACK] } },
+        { content: rm(total), styles: { fontStyle: "bold", fillColor: [...MGRAY], textColor: [...BLACK], halign: "right" } },
       ]],
       showFoot:           "lastPage",
       rowPageBreak:       "avoid",
