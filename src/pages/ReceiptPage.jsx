@@ -21,8 +21,9 @@ export default function ReceiptPage() {
   const [docNo, setDocNo]       = useState("");
   const [saving, setSaving]     = useState(false);
   const [view, setView]         = useState("form");
-  const [logoUrl, setLogoUrl]   = useState(null);
-  const [stampUrl, setStampUrl] = useState(null);
+  const [logoUrl, setLogoUrl]         = useState(null);
+  const [stampUrl, setStampUrl]       = useState(null);
+  const [signatureUrl, setSignatureUrl] = useState(null);
   const [form, setForm] = useState({
     date:          new Date().toISOString().split("T")[0],
     client:        fromState?.client    || "",
@@ -36,10 +37,11 @@ export default function ReceiptPage() {
 
   useEffect(() => {
     async function init() {
-      const { sheetId, logoDataUrl, stampDataUrl } = getConfig();
+      const { sheetId, logoDataUrl, stampDataUrl, signatureDataUrl } = getConfig();
       const token = getToken();
-      if (logoDataUrl)  setLogoUrl(logoDataUrl);
-      if (stampDataUrl) setStampUrl(stampDataUrl);
+      if (logoDataUrl)      setLogoUrl(logoDataUrl);
+      if (stampDataUrl)     setStampUrl(stampDataUrl);
+      if (signatureDataUrl) setSignatureUrl(signatureDataUrl);
       if (!sheetId || !token) { navigate("/login"); return; }
       try {
         await ensureSheetExists(sheetId, "Receipt", token);
@@ -61,7 +63,7 @@ export default function ReceiptPage() {
     const token = getToken();
     const { sheetId, driveFolderId } = getConfig();
     const docData = { ...form, docNo };
-    const pdfBytes = generateReceipt(docData, logoUrl, stampUrl);
+    const pdfBytes = generateReceipt(docData, logoUrl, stampUrl, signatureUrl);
 
     if (action === "preview") {
       window.open(URL.createObjectURL(new Blob([pdfBytes], { type: "application/pdf" })), "_blank");

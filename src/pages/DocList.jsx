@@ -164,7 +164,7 @@ const STATUS_DOT = {
 };
 
 async function autoCreateReceipt(row, paymentMethod, reference, date) {
-  const { sheetId, driveFolderId, logoDataUrl, stampDataUrl } = getConfig();
+  const { sheetId, driveFolderId, logoDataUrl, stampDataUrl, signatureDataUrl } = getConfig();
   const token = getToken();
   if (!sheetId || !token) return;
 
@@ -187,7 +187,7 @@ async function autoCreateReceipt(row, paymentMethod, reference, date) {
 
   try {
     await ensureSheetExists(sheetId, "Receipt", token);
-    const pdfBytes  = generateReceipt(docData, logoDataUrl || null, stampDataUrl || null);
+    const pdfBytes  = generateReceipt(docData, logoDataUrl || null, stampDataUrl || null, signatureDataUrl || null);
     const folderId  = await ensureDriveFolder("Receipt", driveFolderId, token);
     const filename  = `${receiptDocNo} - ${client || "Unknown"}.pdf`;
     const driveLink = await uploadPDF(pdfBytes, filename, folderId, token) || "";
@@ -206,7 +206,7 @@ async function autoCreateReceipt(row, paymentMethod, reference, date) {
 }
 
 async function autoCreateDO(row, date) {
-  const { sheetId, driveFolderId, logoDataUrl, stampDataUrl } = getConfig();
+  const { sheetId, driveFolderId, logoDataUrl, stampDataUrl, signatureDataUrl } = getConfig();
   const token = getToken();
   if (!sheetId || !token) return;
 
@@ -227,7 +227,7 @@ async function autoCreateDO(row, date) {
 
   try {
     await ensureSheetExists(sheetId, "DO", token);
-    const pdfBytes    = generateDO(docData, logoDataUrl || null, stampDataUrl || null);
+    const pdfBytes    = generateDO(docData, logoDataUrl || null, stampDataUrl || null, signatureDataUrl || null);
     const folderId    = await ensureDriveFolder("DO", driveFolderId, token);
     const filename    = `${doDocNo} - ${client || "Unknown"}.pdf`;
     const driveLink   = await uploadPDF(pdfBytes, filename, folderId, token) || "";
