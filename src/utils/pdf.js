@@ -305,14 +305,16 @@ function addSignature(doc, y, type, stampDataUrl, date, signatureDataUrl) {
     doc.text("Issued by:", mid, y);
   }
 
-  // Signature — left side of company column
+  // Signature + stamp — centered side by side in company column
+  const colW = rightEnd - mid;
+  const pairW = (signatureDataUrl ? 30 : 0) + (signatureDataUrl && stampDataUrl ? 4 : 0) + (stampDataUrl ? 18 : 0);
+  const pairX = mid + (colW - pairW) / 2;
   if (signatureDataUrl) {
-    doc.addImage(signatureDataUrl, "PNG", mid + 2, y + 3, 30, 14);
+    doc.addImage(signatureDataUrl, "PNG", pairX, y + 3, 30, 14);
   }
-
-  // Stamp — right side of company column (separate from signature)
   if (stampDataUrl) {
-    doc.addImage(stampDataUrl, "PNG", rightEnd - 20, y + 2, 18, 18);
+    const sX = signatureDataUrl ? pairX + 34 : pairX;
+    doc.addImage(stampDataUrl, "PNG", sX, y + 2, 18, 18);
   }
 
   y += 22; // signature space
@@ -422,11 +424,12 @@ export function generatePO(docData, logoDataUrl, stampDataUrl, signatureDataUrl)
   const pageW = doc.internal.pageSize.getWidth();
   y = finalY + 4;
 
-  if (signatureDataUrl) {
-    doc.addImage(signatureDataUrl, "PNG", pageW - 80 + 2, y + 3, 30, 14);
-  }
-  if (stampDataUrl) {
-    doc.addImage(stampDataUrl, "PNG", pageW - M - 20, y + 2, 18, 18);
+  {
+    const cStart = pageW - 80, cEnd = pageW - M, cW = cEnd - cStart;
+    const pW = (signatureDataUrl ? 30 : 0) + (signatureDataUrl && stampDataUrl ? 4 : 0) + (stampDataUrl ? 18 : 0);
+    const pX = cStart + (cW - pW) / 2;
+    if (signatureDataUrl) doc.addImage(signatureDataUrl, "PNG", pX, y + 3, 30, 14);
+    if (stampDataUrl) doc.addImage(stampDataUrl, "PNG", signatureDataUrl ? pX + 34 : pX, y + 2, 18, 18);
   }
 
   y += 20;
@@ -530,11 +533,12 @@ export function generatePaymentVoucher(docData, logoDataUrl, stampDataUrl, signa
   doc.setTextColor(...BLACK);
   doc.text("Prepared by:", sigStart, y);
 
-  if (signatureDataUrl) {
-    doc.addImage(signatureDataUrl, "PNG", sigStart + 2, y + 3, 30, 14);
-  }
-  if (stampDataUrl) {
-    doc.addImage(stampDataUrl, "PNG", rightEnd - 20, y + 2, 18, 18);
+  {
+    const cW = rightEnd - sigStart;
+    const pW = (signatureDataUrl ? 30 : 0) + (signatureDataUrl && stampDataUrl ? 4 : 0) + (stampDataUrl ? 18 : 0);
+    const pX = sigStart + (cW - pW) / 2;
+    if (signatureDataUrl) doc.addImage(signatureDataUrl, "PNG", pX, y + 3, 30, 14);
+    if (stampDataUrl) doc.addImage(stampDataUrl, "PNG", signatureDataUrl ? pX + 34 : pX, y + 2, 18, 18);
   }
 
   y += 22;
@@ -688,11 +692,12 @@ export function generateDO(docData, logoDataUrl, stampDataUrl, signatureDataUrl)
   doc.setTextColor(...BLACK);
   doc.text("Received by:", M, y); y += 8;
 
-  if (signatureDataUrl) {
-    doc.addImage(signatureDataUrl, "PNG", pageW - 80 + 2, y + 3, 30, 14);
-  }
-  if (stampDataUrl) {
-    doc.addImage(stampDataUrl, "PNG", pageW - M - 20, y + 2, 18, 18);
+  {
+    const cStart = pageW - 80, cEnd = pageW - M, cW = cEnd - cStart;
+    const pW = (signatureDataUrl ? 30 : 0) + (signatureDataUrl && stampDataUrl ? 4 : 0) + (stampDataUrl ? 18 : 0);
+    const pX = cStart + (cW - pW) / 2;
+    if (signatureDataUrl) doc.addImage(signatureDataUrl, "PNG", pX, y + 3, 30, 14);
+    if (stampDataUrl) doc.addImage(stampDataUrl, "PNG", signatureDataUrl ? pX + 34 : pX, y + 2, 18, 18);
   }
 
   doc.setDrawColor(...MGRAY);
