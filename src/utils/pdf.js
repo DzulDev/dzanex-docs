@@ -415,7 +415,7 @@ export function generateInvoice(docData, logoDataUrl, stampDataUrl, signatureDat
   return doc.output("arraybuffer");
 }
 
-export function generatePO(docData, logoDataUrl, stampDataUrl, signatureDataUrl) {
+export function generatePO(docData, logoDataUrl, stampDataUrl) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   doc.__taxRate = Number(docData.taxRate) || 0;
 
@@ -445,7 +445,7 @@ export function generatePO(docData, logoDataUrl, stampDataUrl, signatureDataUrl)
   return doc.output("arraybuffer");
 }
 
-export function generatePaymentVoucher(docData, logoDataUrl, stampDataUrl, signatureDataUrl) {
+export function generatePaymentVoucher(docData, logoDataUrl, stampDataUrl) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
 
@@ -674,7 +674,7 @@ export function generateReceipt(docData, logoDataUrl, stampDataUrl, signatureDat
   return doc.output("arraybuffer");
 }
 
-export function generateDO(docData, logoDataUrl, stampDataUrl, signatureDataUrl) {
+export function generateDO(docData, logoDataUrl, stampDataUrl) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
 
   let y = addHeader(doc, "Delivery Order", docData.docNo, docData.date, logoDataUrl);
