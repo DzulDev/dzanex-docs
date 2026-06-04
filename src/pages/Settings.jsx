@@ -16,6 +16,22 @@ export default function Settings() {
     setTimeout(() => setCopied(false), 2000);
   }
 
+  function handleSignature(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      saveConfig({ signatureDataUrl: reader.result });
+      setConfig(getConfig());
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function removeSignature() {
+    saveConfig({ signatureDataUrl: null });
+    setConfig(getConfig());
+  }
+
   function handleLogo(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -60,6 +76,29 @@ export default function Settings() {
             <Upload size={15} />
             Upload Logo (PNG / JPG)
             <input type="file" accept="image/*" className="hidden" onChange={handleLogo} />
+          </label>
+        )}
+      </div>
+
+      {/* Signature */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
+        <div>
+          <h2 className="font-semibold text-gray-700">Signature</h2>
+          <p className="text-xs text-gray-400 mt-0.5">Appears on the signature section of all generated PDFs.</p>
+        </div>
+        {config.signatureDataUrl ? (
+          <div className="flex items-center gap-4">
+            <img src={config.signatureDataUrl} alt="Signature" className="h-12 object-contain border border-gray-200 rounded p-1 bg-gray-50" />
+            <button onClick={removeSignature}
+              className="flex items-center gap-1.5 text-sm text-red-500 hover:text-red-700">
+              <Trash2 size={14} /> Remove
+            </button>
+          </div>
+        ) : (
+          <label className="flex items-center gap-2 cursor-pointer w-fit px-4 py-2.5 border border-dashed border-gray-300 rounded-lg text-sm text-gray-500 hover:border-blue-400 hover:text-blue-600 transition-colors">
+            <Upload size={15} />
+            Upload Signature (PNG recommended)
+            <input type="file" accept="image/*" className="hidden" onChange={handleSignature} />
           </label>
         )}
       </div>

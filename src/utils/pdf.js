@@ -281,7 +281,7 @@ function addBankDetails(doc, y) {
   return y + 5;
 }
 
-function addSignature(doc, y, type, stampDataUrl, date) {
+function addSignature(doc, y, type, stampDataUrl, date, signatureDataUrl) {
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
   const mid   = pageW / 2 + 5;
@@ -303,6 +303,14 @@ function addSignature(doc, y, type, stampDataUrl, date) {
     doc.text("Submitted by:", mid, y);
   } else {
     doc.text("Issued by:", mid, y);
+  }
+
+  // Signature image — above the line, in the company column
+  if (signatureDataUrl) {
+    const sigW = 36;
+    const sigH = 14;
+    const sigX = mid + (rightEnd - mid - sigW) / 2;
+    doc.addImage(signatureDataUrl, "PNG", sigX, y + 3, sigW, sigH);
   }
 
   // Stamp — 18mm, centered in the company column
@@ -361,7 +369,7 @@ function addFooter(doc) {
   }
 }
 
-export function generateQuotation(docData, logoDataUrl, stampDataUrl) {
+export function generateQuotation(docData, logoDataUrl, stampDataUrl, signatureDataUrl) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   doc.__taxRate = Number(docData.taxRate) || 0;
 
@@ -371,13 +379,13 @@ export function generateQuotation(docData, logoDataUrl, stampDataUrl) {
   const { finalY, total } = addItemsTable(doc, docData.items, y, true);
   y = addTerms(doc, finalY + 10, total * 0.8, docData.paymentTerms, docData.terms);
   y = addBankDetails(doc, y);
-  addSignature(doc, y + 5, "quotation", stampDataUrl, docData.date);
+  addSignature(doc, y + 5, "quotation", stampDataUrl, docData.date, signatureDataUrl);
   addFooter(doc);
 
   return doc.output("arraybuffer");
 }
 
-export function generateInvoice(docData, logoDataUrl, stampDataUrl) {
+export function generateInvoice(docData, logoDataUrl, stampDataUrl, signatureDataUrl) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   doc.__taxRate = Number(docData.taxRate) || 0;
 
@@ -402,12 +410,12 @@ export function generateInvoice(docData, logoDataUrl, stampDataUrl) {
   doc.setTextColor(...GRAY);
   doc.text("Please make payment within 14 days of invoice date.", M, y);
 
-  addSignature(doc, y + 8, "invoice", stampDataUrl, docData.date);
+  addSignature(doc, y + 8, "invoice", stampDataUrl, docData.date, signatureDataUrl);
   addFooter(doc);
   return doc.output("arraybuffer");
 }
 
-export function generatePO(docData, logoDataUrl, stampDataUrl) {
+export function generatePO(docData, logoDataUrl, stampDataUrl, signatureDataUrl) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   doc.__taxRate = Number(docData.taxRate) || 0;
 
@@ -437,7 +445,7 @@ export function generatePO(docData, logoDataUrl, stampDataUrl) {
   return doc.output("arraybuffer");
 }
 
-export function generatePaymentVoucher(docData, logoDataUrl, stampDataUrl) {
+export function generatePaymentVoucher(docData, logoDataUrl, stampDataUrl, signatureDataUrl) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
 
@@ -556,7 +564,7 @@ export function generatePaymentVoucher(docData, logoDataUrl, stampDataUrl) {
   return doc.output("arraybuffer");
 }
 
-export function generateCreditNote(docData, logoDataUrl, stampDataUrl) {
+export function generateCreditNote(docData, logoDataUrl, stampDataUrl, signatureDataUrl) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   doc.__taxRate = Number(docData.taxRate) || 0;
   const pageW = doc.internal.pageSize.getWidth();
@@ -589,12 +597,12 @@ export function generateCreditNote(docData, logoDataUrl, stampDataUrl) {
     y += 8;
   }
 
-  addSignature(doc, y + 5, "invoice", stampDataUrl, docData.date);
+  addSignature(doc, y + 5, "invoice", stampDataUrl, docData.date, signatureDataUrl);
   addFooter(doc);
   return doc.output("arraybuffer");
 }
 
-export function generateReceipt(docData, logoDataUrl, stampDataUrl) {
+export function generateReceipt(docData, logoDataUrl, stampDataUrl, signatureDataUrl) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
 
@@ -661,12 +669,12 @@ export function generateReceipt(docData, logoDataUrl, stampDataUrl) {
   doc.text("Thank you for your payment.", M, y);
   y += 8;
 
-  addSignature(doc, y + 5, "invoice", stampDataUrl, docData.date);
+  addSignature(doc, y + 5, "invoice", stampDataUrl, docData.date, signatureDataUrl);
   addFooter(doc);
   return doc.output("arraybuffer");
 }
 
-export function generateDO(docData, logoDataUrl, stampDataUrl) {
+export function generateDO(docData, logoDataUrl, stampDataUrl, signatureDataUrl) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
 
   let y = addHeader(doc, "Delivery Order", docData.docNo, docData.date, logoDataUrl);
