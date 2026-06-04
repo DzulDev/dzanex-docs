@@ -305,19 +305,14 @@ function addSignature(doc, y, type, stampDataUrl, date, signatureDataUrl) {
     doc.text("Issued by:", mid, y);
   }
 
-  // Signature image — above the line, in the company column
+  // Signature — left side of company column
   if (signatureDataUrl) {
-    const sigW = 36;
-    const sigH = 14;
-    const sigX = mid + (rightEnd - mid - sigW) / 2;
-    doc.addImage(signatureDataUrl, "PNG", sigX, y + 3, sigW, sigH);
+    doc.addImage(signatureDataUrl, "PNG", mid + 2, y + 3, 30, 14);
   }
 
-  // Stamp — 18mm, centered in the company column
+  // Stamp — right side of company column (separate from signature)
   if (stampDataUrl) {
-    const stampSize = 18;
-    const stampX = mid + (rightEnd - mid - stampSize) / 2;
-    doc.addImage(stampDataUrl, "PNG", stampX, y + 2, stampSize, stampSize);
+    doc.addImage(stampDataUrl, "PNG", rightEnd - 20, y + 2, 18, 18);
   }
 
   y += 22; // signature space
@@ -415,7 +410,7 @@ export function generateInvoice(docData, logoDataUrl, stampDataUrl, signatureDat
   return doc.output("arraybuffer");
 }
 
-export function generatePO(docData, logoDataUrl, stampDataUrl) {
+export function generatePO(docData, logoDataUrl, stampDataUrl, signatureDataUrl) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   doc.__taxRate = Number(docData.taxRate) || 0;
 
@@ -427,8 +422,11 @@ export function generatePO(docData, logoDataUrl, stampDataUrl) {
   const pageW = doc.internal.pageSize.getWidth();
   y = finalY + 4;
 
+  if (signatureDataUrl) {
+    doc.addImage(signatureDataUrl, "PNG", pageW - 80 + 2, y + 3, 30, 14);
+  }
   if (stampDataUrl) {
-    doc.addImage(stampDataUrl, "PNG", pageW - 80 + (80 - M - 18) / 2, y, 18, 18);
+    doc.addImage(stampDataUrl, "PNG", pageW - M - 20, y + 2, 18, 18);
   }
 
   y += 20;
@@ -445,7 +443,7 @@ export function generatePO(docData, logoDataUrl, stampDataUrl) {
   return doc.output("arraybuffer");
 }
 
-export function generatePaymentVoucher(docData, logoDataUrl, stampDataUrl) {
+export function generatePaymentVoucher(docData, logoDataUrl, stampDataUrl, signatureDataUrl) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
 
@@ -532,10 +530,11 @@ export function generatePaymentVoucher(docData, logoDataUrl, stampDataUrl) {
   doc.setTextColor(...BLACK);
   doc.text("Prepared by:", sigStart, y);
 
+  if (signatureDataUrl) {
+    doc.addImage(signatureDataUrl, "PNG", sigStart + 2, y + 3, 30, 14);
+  }
   if (stampDataUrl) {
-    const stampSize = 18;
-    const stampX = sigStart + (rightEnd - sigStart - stampSize) / 2;
-    doc.addImage(stampDataUrl, "PNG", stampX, y + 2, stampSize, stampSize);
+    doc.addImage(stampDataUrl, "PNG", rightEnd - 20, y + 2, 18, 18);
   }
 
   y += 22;
@@ -674,7 +673,7 @@ export function generateReceipt(docData, logoDataUrl, stampDataUrl, signatureDat
   return doc.output("arraybuffer");
 }
 
-export function generateDO(docData, logoDataUrl, stampDataUrl) {
+export function generateDO(docData, logoDataUrl, stampDataUrl, signatureDataUrl) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
 
   let y = addHeader(doc, "Delivery Order", docData.docNo, docData.date, logoDataUrl);
@@ -689,8 +688,11 @@ export function generateDO(docData, logoDataUrl, stampDataUrl) {
   doc.setTextColor(...BLACK);
   doc.text("Received by:", M, y); y += 8;
 
+  if (signatureDataUrl) {
+    doc.addImage(signatureDataUrl, "PNG", pageW - 80 + 2, y + 3, 30, 14);
+  }
   if (stampDataUrl) {
-    doc.addImage(stampDataUrl, "PNG", pageW - 80 + (80 - M - 18) / 2, y, 18, 18);
+    doc.addImage(stampDataUrl, "PNG", pageW - M - 20, y + 2, 18, 18);
   }
 
   doc.setDrawColor(...MGRAY);
