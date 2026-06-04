@@ -94,10 +94,13 @@ function buildMonthOptions() {
 
 const MONTH_OPTIONS = buildMonthOptions();
 
+const YEAR_OPTIONS = Array.from({ length: 4 }, (_, i) => String(new Date().getFullYear() - i));
+
 export default function Dashboard() {
   const [allData, setAllData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(MONTH_OPTIONS[0].value);
+  const [selectedYear, setSelectedYear] = useState(YEAR_OPTIONS[0]);
   const navigate = useNavigate();
 
   async function load() {
@@ -174,6 +177,17 @@ setAllData({ Quotation: qt, Invoice: inv, PO: po, DO: doRows, PV: pv, Receipt: r
   ].reduce((s, n) => s + n, 0);
 
   const netThisMonth    = paidThisMonth - spentThisMonth;
+
+  // YTD profit
+  const ytdIncome     = allData.Invoice
+    .filter(r => r.Status === "Paid" && (r.Date || "").startsWith(selectedYear))
+    .reduce((s, r) => s + (parseFloat(r.Total) || 0), 0);
+  const ytdExpenses   = [
+    ...allData.PO.filter(r => r.Status === "Paid" && (r.Date || "").startsWith(selectedYear)).map(r => parseFloat(r.Total)  || 0),
+    ...allData.PV.filter(r => r.Status === "Paid" && (r.Date || "").startsWith(selectedYear)).map(r => parseFloat(r.Amount) || 0),
+  ].reduce((s, n) => s + n, 0);
+  const ytdProfit     = ytdIncome - ytdExpenses;
+  const ytdMargin     = ytdIncome > 0 ? Math.round((ytdProfit / ytdIncome) * 100) : 0;
 
   // Pending action alerts
   const pendingQT  = counts.Quotation.Pending || 0;
@@ -262,6 +276,37 @@ setAllData({ Quotation: qt, Invoice: inv, PO: po, DO: doRows, PV: pv, Receipt: r
           <p className="text-[11px] text-gray-400 mb-1">Net</p>
           <p className={`text-sm font-bold leading-tight ${netThisMonth >= 0 ? "text-[#57A9A9]" : "text-red-500"}`}>{fmtMYR(netThisMonth)}</p>
           <p className="text-[10px] text-gray-400 mt-0.5">{netThisMonth >= 0 ? "net positive" : "net negative"}</p>
+        </div>
+      </div>
+
+      {/* YTD Profit */}
+      <div className={`rounded-xl border p-4 ${ytdProfit >= 0 ? "bg-[#57A9A9]/5 border-[#57A9A9]/30" : "bg-red-50 border-red-200"}`}>
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-[11px] text-gray-400">Total Profit</p>
+          <select
+            value={selectedYear}
+            onChange={e => setSelectedYear(e.target.value)}
+            className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-600 bg-white focus:outline-none focus:ring-1 focus:ring-[#57A9A9]"
+          >
+            {YEAR_OPTIONS.map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+        </div>
+        <div className="flex items-center justify-between">
+          <p className={`text-xl font-bold leading-tight ${ytdProfit >= 0 ? "text-[#57A9A9]" : "text-red-500"}`}>{fmtMYR(ytdProfit)}</p>
+          <div className="text-right">
+            <p className={`text-2xl font-bold ${ytdProfit >= 0 ? "text-[#57A9A9]" : "text-red-500"}`}>{ytdMargin}%</p>
+            <p className="text-[10px] text-gray-400">margin</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-4 mt-3 pt-3 border-t border-black/5">
+          <div>
+            <p className="text-[10px] text-gray-400">Income</p>
+            <p className="text-xs font-semibold text-green-600">{fmtMYR(ytdIncome)}</p>
+          </div>
+          <div>
+            <p className="text-[10px] text-gray-400">Expenses</p>
+            <p className="text-xs font-semibold text-red-500">{fmtMYR(ytdExpenses)}</p>
+          </div>
         </div>
       </div>
 
