@@ -82,9 +82,22 @@ function fmtDate(d) {
 }
 
 
+function buildMonthOptions() {
+  const now = new Date();
+  return Array.from({ length: 12 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const label = d.toLocaleString("default", { month: "long", year: "numeric" });
+    return { value, label };
+  });
+}
+
+const MONTH_OPTIONS = buildMonthOptions();
+
 export default function Dashboard() {
   const [allData, setAllData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [selectedMonth, setSelectedMonth] = useState(MONTH_OPTIONS[0].value);
   const navigate = useNavigate();
 
   async function load() {
@@ -147,19 +160,17 @@ setAllData({ Quotation: qt, Invoice: inv, PO: po, DO: doRows, PV: pv, Receipt: r
   };
 
   // Financial metrics
-  const now             = new Date();
-  const monthPrefix     = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   const pendingINVValue = allData.Invoice.filter(r => !r.Status || r.Status === "Pending").reduce((s, r) => s + (parseFloat(r.Total) || 0), 0);
   const overdueINVValue = allData.Invoice.filter(r => r.Status === "Overdue").reduce((s, r) => s + (parseFloat(r.Total) || 0), 0);
   const toCollect       = pendingINVValue + overdueINVValue;
 
   const paidThisMonth   = allData.Invoice
-    .filter(r => r.Status === "Paid" && (r.Date || "").startsWith(monthPrefix))
+    .filter(r => r.Status === "Paid" && (r.Date || "").startsWith(selectedMonth))
     .reduce((s, r) => s + (parseFloat(r.Total) || 0), 0);
 
   const spentThisMonth  = [
-    ...allData.PO.filter(r => r.Status === "Paid" && (r.Date || "").startsWith(monthPrefix)).map(r => parseFloat(r.Total)  || 0),
-    ...allData.PV.filter(r => r.Status === "Paid" && (r.Date || "").startsWith(monthPrefix)).map(r => parseFloat(r.Amount) || 0),
+    ...allData.PO.filter(r => r.Status === "Paid" && (r.Date || "").startsWith(selectedMonth)).map(r => parseFloat(r.Total)  || 0),
+    ...allData.PV.filter(r => r.Status === "Paid" && (r.Date || "").startsWith(selectedMonth)).map(r => parseFloat(r.Amount) || 0),
   ].reduce((s, n) => s + n, 0);
 
   const netThisMonth    = paidThisMonth - spentThisMonth;
@@ -219,6 +230,18 @@ setAllData({ Quotation: qt, Invoice: inv, PO: po, DO: doRows, PV: pv, Receipt: r
       </div>
 
       {/* Financial summary */}
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold text-gray-500">Financial Summary</p>
+        <select
+          value={selectedMonth}
+          onChange={e => setSelectedMonth(e.target.value)}
+          className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-600 bg-white focus:outline-none focus:ring-1 focus:ring-[#57A9A9]"
+        >
+          {MONTH_OPTIONS.map(o => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+      </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <p className="text-[11px] text-gray-400 mb-1">To Collect</p>
@@ -226,17 +249,17 @@ setAllData({ Quotation: qt, Invoice: inv, PO: po, DO: doRows, PV: pv, Receipt: r
           <p className="text-[10px] text-gray-400 mt-0.5">{pendingINV + overdueINV} unpaid invoice{pendingINV + overdueINV !== 1 ? "s" : ""}</p>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-[11px] text-gray-400 mb-1">Income (Month)</p>
+          <p className="text-[11px] text-gray-400 mb-1">Income</p>
           <p className="text-sm font-bold text-green-600 leading-tight">{fmtMYR(paidThisMonth)}</p>
           <p className="text-[10px] text-gray-400 mt-0.5">paid invoices</p>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-[11px] text-gray-400 mb-1">Expenses (Month)</p>
+          <p className="text-[11px] text-gray-400 mb-1">Expenses</p>
           <p className="text-sm font-bold text-red-500 leading-tight">{fmtMYR(spentThisMonth)}</p>
           <p className="text-[10px] text-gray-400 mt-0.5">paid PO + PV</p>
         </div>
         <div className={`rounded-xl border p-4 ${netThisMonth >= 0 ? "bg-[#57A9A9]/5 border-[#57A9A9]/30" : "bg-red-50 border-red-200"}`}>
-          <p className="text-[11px] text-gray-400 mb-1">Net (Month)</p>
+          <p className="text-[11px] text-gray-400 mb-1">Net</p>
           <p className={`text-sm font-bold leading-tight ${netThisMonth >= 0 ? "text-[#57A9A9]" : "text-red-500"}`}>{fmtMYR(netThisMonth)}</p>
           <p className="text-[10px] text-gray-400 mt-0.5">{netThisMonth >= 0 ? "net positive" : "net negative"}</p>
         </div>
