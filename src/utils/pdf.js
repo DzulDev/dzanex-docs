@@ -110,7 +110,7 @@ function addSectionTitle(doc, subject, y) {
   return y + 8;
 }
 
-function addItemsTable(doc, items, y, showPrice) {
+function addItemsTable(doc, items, y, showPrice, footLabel = "Total Amount") {
   if (showPrice) {
     const taxRate  = doc.__taxRate || 0;
     const subtotal = items.reduce((s, i) => s + (parseFloat(i.qty) || 0) * (parseFloat(i.unitPrice) || 0), 0);
@@ -156,7 +156,7 @@ function addItemsTable(doc, items, y, showPrice) {
       head: [["No.", "Items & Descriptions", "Quantity", "Price", "Amount"]],
       body: rows,
       foot: [[
-        { content: "Total Amount", colSpan: 4, styles: { halign: "right", fontStyle: "bold", fillColor: [...MGRAY], textColor: [...BLACK] } },
+        { content: footLabel, colSpan: 4, styles: { halign: "right", fontStyle: "bold", fillColor: [...MGRAY], textColor: [...BLACK] } },
         { content: rm(total), styles: { fontStyle: "bold", fillColor: [...MGRAY], textColor: [...BLACK], halign: "right" } },
       ]],
       showFoot:           "lastPage",
@@ -626,30 +626,17 @@ export function generateReceipt(docData, logoDataUrl, stampDataUrl, signatureDat
   doc.text(docData.client || "(Not specified)", M + 4, y + 5);
   y += 18;
 
-  const itemDescs = (docData.items || []).map(i => i.description?.trim()).filter(Boolean);
-  const body = itemDescs.length > 0
-    ? itemDescs.map(d => [d, ""])
-    : [[
-        docData.invoiceRef?.trim() ? `Payment for Invoice ${docData.invoiceRef}` : "Payment Received",
-        "",
-      ]];
+  const hasItems = (docData.items || []).some(i => i.description?.trim());
+  const items = hasItems
+    ? docData.items
+    : [{
+        description: docData.invoiceRef?.trim() ? `Payment for Invoice ${docData.invoiceRef}` : "Payment Received",
+        qty: 1, unit: "l/s", unitPrice: docData.amount || 0,
+      }];
 
-  autoTable(doc, {
-    startY: y,
-    head: [["Description", "Amount (RM)"]],
-    body,
-    foot: [[
-      { content: "Total Received", styles: { halign: "right", fontStyle: "bold", fillColor: [...MGRAY], textColor: [...BLACK] } },
-      { content: rm(docData.amount), styles: { halign: "right", fontStyle: "bold", fillColor: [...MGRAY], textColor: [...BLACK] } },
-    ]],
-    showFoot: "lastPage",
-    styles:     { fontSize: 9, cellPadding: 4 },
-    headStyles: { fillColor: TEAL, textColor: 255, fontStyle: "bold" },
-    bodyStyles: { fillColor: [255, 255, 255] },
-    columnStyles: { 1: { cellWidth: 45, halign: "right" } },
-    margin: { left: M, right: M },
-  });
-  y = doc.lastAutoTable.finalY + 8;
+  doc.__taxRate = 0;
+  const { finalY } = addItemsTable(doc, items, y, true, "Total Received");
+  y = finalY + 8;
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);

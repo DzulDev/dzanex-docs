@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Loader2, Save, Eye, Plus, Trash2 } from "lucide-react";
+import { Loader2, Save, Eye } from "lucide-react";
 import DocList from "./DocList";
+import ItemsTable from "../components/ItemsTable";
 import { getConfig } from "../utils/storage";
 import {
   getToken, getNextDocNumber, appendRow,
@@ -27,13 +28,14 @@ export default function ReceiptPage() {
   const [form, setForm] = useState({
     date:          new Date().toISOString().split("T")[0],
     client:        fromState?.client    || "",
-    amount:        fromState?.amount    || "",
     paymentMethod: "Bank Transfer",
     invoiceRef:    fromState?.invoiceRef || "",
     reference:     "",
-    items:         fromState?.items?.length ? fromState.items : [{ description: "" }],
+    items:         fromState?.items?.length ? fromState.items : [{ description: "", qty: 1, unit: "unit", unitPrice: 0, notes: "", isBold: false }],
     notes:         "",
   });
+
+  const subtotal = form.items.reduce((s, i) => s + Number(i.qty || 0) * Number(i.unitPrice || 0), 0);
 
   useEffect(() => {
     async function init() {
@@ -62,7 +64,7 @@ export default function ReceiptPage() {
   async function handleSave(action) {
     const token = getToken();
     const { sheetId, driveFolderId } = getConfig();
-    const docData = { ...form, docNo };
+    const docData = { ...form, docNo, amount: subtotal };
     const pdfBytes = generateReceipt(docData, logoUrl, stampUrl, signatureUrl);
 
     if (action === "preview") {
@@ -79,7 +81,7 @@ export default function ReceiptPage() {
 
       await appendRow(sheetId, "Receipt", [
         docNo, form.date, form.client,
-        parseFloat(form.amount || 0).toFixed(2),
+        subtotal.toFixed(2),
         form.paymentMethod, form.invoiceRef,
         "Issued", driveLink, form.notes, rawJson,
       ], token);
@@ -171,47 +173,13 @@ export default function ReceiptPage() {
             {/* Items / Components Purchased */}
             <div className="bg-white rounded-xl border border-gray-200 p-5">
               <h2 className="font-semibold text-gray-700 mb-4">Items / Components Purchased</h2>
-              <div className="space-y-2">
-                {form.items.map((item, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <input
-                      className="input flex-1"
-                      placeholder="e.g. Motorized Curtain Track"
-                      value={item.description}
-                      onChange={e => {
-                        const items = form.items.map((it, idx) => idx === i ? { ...it, description: e.target.value } : it);
-                        set("items", items);
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => set("items", form.items.filter((_, idx) => idx !== i))}
-                      className="text-red-400 hover:text-red-600 transition-colors"
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <button
-                type="button"
-                onClick={() => set("items", [...form.items, { description: "" }])}
-                className="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 font-medium mt-3"
-              >
-                <Plus size={15} />
-                Add Item
-              </button>
+              <ItemsTable items={form.items} onChange={(items) => set("items", items)} showPrice />
             </div>
 
             {/* Payment Details */}
             <div className="bg-white rounded-xl border border-gray-200 p-5">
               <h2 className="font-semibold text-gray-700 mb-4">Payment Details</h2>
               <div className="space-y-4">
-                <div>
-                  <label className="label">Amount Received (RM) *</label>
-                  <input type="number" className="input" min={0} step={0.01} placeholder="0.00"
-                    value={form.amount} onChange={e => set("amount", e.target.value)} />
-                </div>
                 <div>
                   <label className="label">Payment Method</label>
                   <select className="input" value={form.paymentMethod}
@@ -244,11 +212,11 @@ export default function ReceiptPage() {
             </div>
 
             {/* Total display */}
-            {form.amount && (
+            {subtotal > 0 && (
               <div className="bg-white rounded-xl border border-gray-200 p-5 flex justify-between items-center">
                 <span className="font-semibold text-gray-700">Total Received</span>
                 <span className="text-xl font-bold text-green-600">
-                  MYR {fmt2(form.amount)}
+                  MYR {fmt2(subtotal)}
                 </span>
               </div>
             )}

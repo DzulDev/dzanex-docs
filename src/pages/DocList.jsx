@@ -32,11 +32,8 @@ function invoiceToReceiptPrefill(prefill, row) {
   return {
     _type: "receipt",
     client:    prefill?.to?.name || row["Client"] || "",
-    amount:    row["Total"] || "",
     invoiceRef: row["Doc No"] || "",
-    items: (prefill?.items || [])
-      .map(i => ({ description: i.description }))
-      .filter(i => i.description?.trim()),
+    items: (prefill?.items || []).filter(i => i.description?.trim()),
   };
 }
 
@@ -181,9 +178,7 @@ async function autoCreateReceipt(row, paymentMethod, reference, date) {
   const client  = prefill?.to?.name || row["Client"] || "";
   const amount  = prefill?.items?.reduce((s, i) => s + Number(i.qty||0)*Number(i.unitPrice||0), 0)?.toFixed(2) || row["Total"] || "0.00";
 
-  const items = (prefill?.items || [])
-    .map(i => ({ description: i.description }))
-    .filter(i => i.description?.trim());
+  const items = (prefill?.items || []).filter(i => i.description?.trim());
 
   const docData = {
     docNo: receiptDocNo, date: today, client, amount,
