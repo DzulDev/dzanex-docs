@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Loader2, Save, Eye } from "lucide-react";
+import { Loader2, Save, Eye, Plus, Trash2 } from "lucide-react";
 import DocList from "./DocList";
 import { getConfig } from "../utils/storage";
 import {
@@ -31,7 +31,7 @@ export default function ReceiptPage() {
     paymentMethod: "Bank Transfer",
     invoiceRef:    fromState?.invoiceRef || "",
     reference:     "",
-    purpose:       "",
+    items:         fromState?.items?.length ? fromState.items : [{ description: "" }],
     notes:         "",
   });
 
@@ -168,6 +168,41 @@ export default function ReceiptPage() {
               </div>
             </div>
 
+            {/* Items / Components Purchased */}
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <h2 className="font-semibold text-gray-700 mb-4">Items / Components Purchased</h2>
+              <div className="space-y-2">
+                {form.items.map((item, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <input
+                      className="input flex-1"
+                      placeholder="e.g. Motorized Curtain Track"
+                      value={item.description}
+                      onChange={e => {
+                        const items = form.items.map((it, idx) => idx === i ? { ...it, description: e.target.value } : it);
+                        set("items", items);
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => set("items", form.items.filter((_, idx) => idx !== i))}
+                      className="text-red-400 hover:text-red-600 transition-colors"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => set("items", [...form.items, { description: "" }])}
+                className="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 font-medium mt-3"
+              >
+                <Plus size={15} />
+                Add Item
+              </button>
+            </div>
+
             {/* Payment Details */}
             <div className="bg-white rounded-xl border border-gray-200 p-5">
               <h2 className="font-semibold text-gray-700 mb-4">Payment Details</h2>
@@ -191,14 +226,6 @@ export default function ReceiptPage() {
                   </label>
                   <input className="input" placeholder="e.g. INV-2025-001"
                     value={form.invoiceRef} onChange={e => set("invoiceRef", e.target.value)} />
-                </div>
-                <div>
-                  <label className="label">
-                    Purpose / Description{" "}
-                    <span className="text-gray-400 font-normal">(if no invoice ref)</span>
-                  </label>
-                  <input className="input" placeholder="e.g. IT Support Services"
-                    value={form.purpose} onChange={e => set("purpose", e.target.value)} />
                 </div>
                 <div>
                   <label className="label">

@@ -626,17 +626,18 @@ export function generateReceipt(docData, logoDataUrl, stampDataUrl, signatureDat
   doc.text(docData.client || "(Not specified)", M + 4, y + 5);
   y += 18;
 
-  const desc = docData.invoiceRef?.trim()
-    ? `Payment for Invoice ${docData.invoiceRef}`
-    : (docData.purpose?.trim() || "Payment Received");
+  const itemDescs = (docData.items || []).map(i => i.description?.trim()).filter(Boolean);
+  const body = itemDescs.length > 0
+    ? itemDescs.map(d => [d, ""])
+    : [[
+        docData.invoiceRef?.trim() ? `Payment for Invoice ${docData.invoiceRef}` : "Payment Received",
+        "",
+      ]];
 
   autoTable(doc, {
     startY: y,
     head: [["Description", "Amount (RM)"]],
-    body: [[
-      desc,
-      { content: rm(docData.amount), styles: { halign: "right", fontStyle: "bold" } },
-    ]],
+    body,
     foot: [[
       { content: "Total Received", styles: { halign: "right", fontStyle: "bold", fillColor: [...MGRAY], textColor: [...BLACK] } },
       { content: rm(docData.amount), styles: { halign: "right", fontStyle: "bold", fillColor: [...MGRAY], textColor: [...BLACK] } },
