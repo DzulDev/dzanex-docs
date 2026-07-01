@@ -223,7 +223,7 @@ function addItemsTable(doc, items, y, showPrice, footLabel = "Total Amount") {
       headStyles:         { fillColor: TEAL, textColor: 255, fontStyle: "bold" },
       bodyStyles:         { fillColor: [242, 242, 242] },
       alternateRowStyles: { fillColor: [242, 242, 242] },
-      footStyles:         { textColor: [...BLACK] },
+      footStyles:         { textColor: [...BLACK], cellPadding: { top: 1.2, right: 3, bottom: 1.2, left: 3 } },
       columnStyles: {
         0: { cellWidth: 12, halign: "center" },
         2: { cellWidth: 24, halign: "center" },
