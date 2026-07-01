@@ -69,8 +69,10 @@ export default function DocPage({ title, prefix, sheetName, showPrice, showTax, 
       const driveLink = await uploadPDF(pdfBytes, filename, folderId, token) || "";
 
       const subtotal = formData.items.reduce((s, i) => s + Number(i.qty || 0) * Number(i.unitPrice || 0), 0);
-      const tax = subtotal * (Number(formData.taxRate) / 100);
-      const total = subtotal + tax;
+      const discountAmt = subtotal * (Number(formData.discount || 0) / 100);
+      const afterDiscount = subtotal - discountAmt;
+      const tax = afterDiscount * (Number(formData.taxRate) / 100);
+      const total = afterDiscount + tax;
       const itemsSummary = formData.items.map((i) => i.description).join(", ");
 
       // eslint-disable-next-line no-unused-vars
@@ -137,6 +139,7 @@ export default function DocPage({ title, prefix, sheetName, showPrice, showTax, 
             showPrice={showPrice}
             showTax={showTax}
             showValidUntil={showValidUntil}
+            showDiscount={showValidUntil}
             partyLabel={partyLabel}
             onSave={handleSave}
             saving={saving}

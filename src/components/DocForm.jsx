@@ -17,6 +17,7 @@ export default function DocForm({
   showPrice = true,
   showTax = true,
   showValidUntil = false,
+  showDiscount = false,
   partyLabel = "Client",
   onSave,
   saving,
@@ -29,6 +30,7 @@ export default function DocForm({
     date: today,
     validUntil:   "",
     taxRate:      initialData?.taxRate      ?? 0,
+    discount:     initialData?.discount     ?? 0,
     subject:      initialData?.subject      || "",
     paymentTerms: initialData?.paymentTerms || "",
     notes:        initialData?.notes        || "",
@@ -53,8 +55,10 @@ export default function DocForm({
     (s, i) => s + Number(i.qty || 0) * Number(i.unitPrice || 0),
     0
   );
-  const tax = subtotal * (Number(form.taxRate) / 100);
-  const total = subtotal + tax;
+  const discountAmt = subtotal * (Number(form.discount) / 100);
+  const afterDiscount = subtotal - discountAmt;
+  const tax = afterDiscount * (Number(form.taxRate) / 100);
+  const total = afterDiscount + tax;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -203,18 +207,40 @@ export default function DocForm({
         </div>
         {showPrice && (
           <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
+            {showDiscount && (
+              <div className="flex items-center justify-between pb-1 border-b border-gray-100">
+                <label className="text-sm text-gray-600">Discount (%)</label>
+                <input
+                  type="number"
+                  className="w-24 input text-right py-1 text-sm"
+                  min={0}
+                  max={100}
+                  step={0.1}
+                  value={form.discount}
+                  onChange={(e) => set("discount", e.target.value)}
+                />
+              </div>
+            )}
             <div className="flex justify-between text-sm text-gray-600">
-              <span>Subtotal</span>
+              <span>Total</span>
               <span>MYR {fmt2(subtotal)}</span>
             </div>
-            {Number(form.taxRate) > 0 && (
+            {showTax && (
               <div className="flex justify-between text-sm text-gray-600">
-                <span>Tax ({form.taxRate}%)</span>
+                <span>SST ({form.taxRate}%)</span>
                 <span>MYR {fmt2(tax)}</span>
               </div>
             )}
+            {showDiscount && (
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>Discount ({form.discount}%)</span>
+                <span className={Number(form.discount) > 0 ? "text-red-500" : ""}>
+                  {Number(form.discount) > 0 ? `- MYR ${fmt2(discountAmt)}` : "MYR 0.00"}
+                </span>
+              </div>
+            )}
             <div className="border-t pt-3 flex justify-between font-bold text-gray-800">
-              <span>TOTAL</span>
+              <span>Total Amount</span>
               <span>MYR {fmt2(total)}</span>
             </div>
           </div>

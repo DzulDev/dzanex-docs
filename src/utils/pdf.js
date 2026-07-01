@@ -13,6 +13,39 @@ const MGRAY = [209, 213, 219];
 
 const M = 14;
 
+const STATUS_BADGE_COLORS = {
+  Paid:           [22,  163,  74],
+  Accepted:       [22,  163,  74],
+  Delivered:      [22,  163,  74],
+  Applied:        [22,  163,  74],
+  Received:       [59,  130, 246],
+  "Deposit Paid": [14,  165, 233],
+  Issued:         [59,  130, 246],
+  Overdue:        [234,  88,  12],
+  Rejected:       [220,  38,  38],
+  Voided:         [107, 114, 128],
+  Cancelled:      [107, 114, 128],
+  Pending:        [202, 138,   4],
+};
+
+function addStatusStamp(doc, status) {
+  if (!status) return;
+  const color  = STATUS_BADGE_COLORS[status] || [107, 114, 128];
+  const pageW  = doc.internal.pageSize.getWidth();
+  const bW = 30, bH = 7;
+  const bX = pageW - M - bW, bY = 32;
+  doc.setPage(1);
+  doc.setFillColor(...color);
+  doc.roundedRect(bX, bY, bW, bH, 1.5, 1.5, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7);
+  doc.setTextColor(255, 255, 255);
+  doc.text(status.toUpperCase(), bX + bW / 2, bY + 4.8, { align: "center" });
+  doc.setTextColor(...BLACK);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+}
+
 // Formats a number to "RM 1,234.56" for use in PDF cells
 function rm(n) {
   return `RM ${Number(n || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
@@ -112,9 +145,12 @@ function addSectionTitle(doc, subject, y) {
 
 function addItemsTable(doc, items, y, showPrice, footLabel = "Total Amount") {
   if (showPrice) {
-    const taxRate  = doc.__taxRate || 0;
-    const subtotal = items.reduce((s, i) => s + (parseFloat(i.qty) || 0) * (parseFloat(i.unitPrice) || 0), 0);
-    const total    = subtotal + subtotal * taxRate / 100;
+    const taxRate     = doc.__taxRate  || 0;
+    const discount    = doc.__discount || 0;
+    const subtotal    = items.reduce((s, i) => s + (parseFloat(i.qty) || 0) * (parseFloat(i.unitPrice) || 0), 0);
+    const discountAmt = subtotal * discount / 100;
+    const afterDisc   = subtotal - discountAmt;
+    const total       = afterDisc + afterDisc * taxRate / 100;
 
     // Track items that need bold-main + normal-bullets split rendering
     const splitBold = {};
@@ -155,10 +191,32 @@ function addItemsTable(doc, items, y, showPrice, footLabel = "Total Amount") {
       startY: y,
       head: [["No.", "Items & Descriptions", "Quantity", "Price", "Amount"]],
       body: rows,
-      foot: [[
-        { content: footLabel, colSpan: 4, styles: { halign: "right", fontStyle: "bold", fillColor: [...MGRAY], textColor: [...BLACK] } },
-        { content: rm(total), styles: { fontStyle: "bold", fillColor: [...MGRAY], textColor: [...BLACK], halign: "right" } },
-      ]],
+      foot: (() => {
+        const rows = [];
+        if (discount > 0 || taxRate > 0) {
+          rows.push([
+            { content: "Total", colSpan: 4, styles: { halign: "right", fillColor: [...MGRAY], textColor: [...BLACK] } },
+            { content: rm(subtotal), styles: { fillColor: [...MGRAY], textColor: [...BLACK], halign: "right" } },
+          ]);
+        }
+        if (taxRate > 0) {
+          rows.push([
+            { content: `SST (${taxRate}%)`, colSpan: 4, styles: { halign: "right", fillColor: [...MGRAY], textColor: [...BLACK] } },
+            { content: rm(afterDisc * taxRate / 100), styles: { fillColor: [...MGRAY], textColor: [...BLACK], halign: "right" } },
+          ]);
+        }
+        if (discount > 0) {
+          rows.push([
+            { content: `Discount (${discount}%)`, colSpan: 4, styles: { halign: "right", fillColor: [...MGRAY], textColor: [...BLACK] } },
+            { content: `- ${rm(discountAmt)}`, styles: { fillColor: [...MGRAY], textColor: [...BLACK], halign: "right" } },
+          ]);
+        }
+        rows.push([
+          { content: footLabel, colSpan: 4, styles: { halign: "right", fontStyle: "bold", fillColor: [...MGRAY], textColor: [...BLACK] } },
+          { content: rm(total), styles: { fontStyle: "bold", fillColor: [...MGRAY], textColor: [...BLACK], halign: "right" } },
+        ]);
+        return rows;
+      })(),
       showFoot:           "lastPage",
       rowPageBreak:       "avoid",
       styles:             { fontSize: 9, cellPadding: 3 },
@@ -368,7 +426,8 @@ function addFooter(doc) {
 
 export function generateQuotation(docData, logoDataUrl, stampDataUrl, signatureDataUrl) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
-  doc.__taxRate = Number(docData.taxRate) || 0;
+  doc.__taxRate  = Number(docData.taxRate)  || 0;
+  doc.__discount = Number(docData.discount) || 0;
 
   let y = addHeader(doc, "Quotation", docData.docNo, docData.date, logoDataUrl);
   y = addBillTo(doc, docData.to, docData.date, y);
@@ -378,7 +437,7 @@ export function generateQuotation(docData, logoDataUrl, stampDataUrl, signatureD
   y = addBankDetails(doc, y);
   addSignature(doc, y + 5, "quotation", stampDataUrl, docData.date, signatureDataUrl);
   addFooter(doc);
-
+  addStatusStamp(doc, docData.status);
   return doc.output("arraybuffer");
 }
 
@@ -409,6 +468,7 @@ export function generateInvoice(docData, logoDataUrl, stampDataUrl, signatureDat
 
   addSignature(doc, y + 8, "invoice", stampDataUrl, docData.date, signatureDataUrl);
   addFooter(doc);
+  addStatusStamp(doc, docData.status);
   return doc.output("arraybuffer");
 }
 
@@ -443,6 +503,7 @@ export function generatePO(docData, logoDataUrl, stampDataUrl, signatureDataUrl)
   doc.text(`Date: ${format(new Date(docData.date), "d MMMM yyyy")}`, pageW - 80, y + 15);
 
   addFooter(doc);
+  addStatusStamp(doc, docData.status);
   return doc.output("arraybuffer");
 }
 
@@ -564,6 +625,7 @@ export function generatePaymentVoucher(docData, logoDataUrl, stampDataUrl, signa
   doc.text(`Date: ${format(new Date(docData.date), "d MMMM yyyy")}`, sigStart, y);
 
   addFooter(doc);
+  addStatusStamp(doc, docData.status);
   return doc.output("arraybuffer");
 }
 
@@ -602,6 +664,7 @@ export function generateCreditNote(docData, logoDataUrl, stampDataUrl, signature
 
   addSignature(doc, y + 5, "invoice", stampDataUrl, docData.date, signatureDataUrl);
   addFooter(doc);
+  addStatusStamp(doc, docData.status);
   return doc.output("arraybuffer");
 }
 
@@ -662,6 +725,7 @@ export function generateReceipt(docData, logoDataUrl, stampDataUrl, signatureDat
 
   addSignature(doc, y + 5, "invoice", stampDataUrl, docData.date, signatureDataUrl);
   addFooter(doc);
+  addStatusStamp(doc, docData.status);
   return doc.output("arraybuffer");
 }
 
@@ -702,5 +766,6 @@ export function generateDO(docData, logoDataUrl, stampDataUrl, signatureDataUrl)
   doc.text(`Date: ${format(new Date(docData.date), "d MMMM yyyy")}`, pageW - 80, y + 35);
 
   addFooter(doc);
+  addStatusStamp(doc, docData.status);
   return doc.output("arraybuffer");
 }

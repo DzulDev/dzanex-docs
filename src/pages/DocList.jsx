@@ -2,9 +2,19 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getConfig } from "../utils/storage";
 import { getRows, updateCell, getToken, getSheetGid, deleteSheetRow, deleteDriveFile, appendRow, ensureDriveFolder, uploadPDF, ensureSheetExists, uploadFile, getColLetter, ensureSheetHasHeaders } from "../utils/google";
-import { generateReceipt, generateDO } from "../utils/pdf";
+import { generateQuotation, generateInvoice, generatePO, generateDO, generatePaymentVoucher, generateCreditNote, generateReceipt } from "../utils/pdf";
+
+const GENERATE_FN = {
+  Quotation:  generateQuotation,
+  Invoice:    generateInvoice,
+  PO:         generatePO,
+  DO:         generateDO,
+  PV:         generatePaymentVoucher,
+  CreditNote: generateCreditNote,
+  Receipt:    generateReceipt,
+};
 import { showToast } from "../utils/toast";
-import { ChevronDown, ExternalLink, FileText, Loader2, Paperclip, RefreshCw, Trash2, Receipt } from "lucide-react";
+import { ChevronDown, FileText, Loader2, Paperclip, RefreshCw, Trash2, Receipt } from "lucide-react";
 
 const PAYMENT_METHODS = ["Bank Transfer", "Cash", "Cheque", "Online Transfer", "Credit Card", "Other"];
 
@@ -397,6 +407,22 @@ export default function DocList({ sheetName, title }) {
     }
   }
 
+  function openPDF(row) {
+    const prefill = getPrefill(row);
+    const generateFn = GENERATE_FN[sheetName];
+    if (prefill && generateFn) {
+      const { logoDataUrl, stampDataUrl, signatureDataUrl } = getConfig();
+      const pdfBytes = generateFn(
+        { ...prefill, status: row["Status"] || "" },
+        logoDataUrl || null, stampDataUrl || null, signatureDataUrl || null
+      );
+      const url = URL.createObjectURL(new Blob([pdfBytes], { type: "application/pdf" }));
+      window.open(url, "_blank");
+    } else if (row["Drive Link"]) {
+      window.open(row["Drive Link"], "_blank");
+    }
+  }
+
   function toggleStatus(e, row) {
     if (openStatus === row._rowNum) { closeAll(); return; }
     const rect = e.currentTarget.getBoundingClientRect();
@@ -623,14 +649,14 @@ export default function DocList({ sheetName, title }) {
 
                   {/* Action buttons */}
                   <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100">
-                    {row["Drive Link"] ? (
-                      <a
-                        href={row["Drive Link"]} target="_blank" rel="noreferrer"
+                    {(getPrefill(row) || row["Drive Link"]) ? (
+                      <button
+                        onClick={() => openPDF(row)}
                         className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-medium py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
                       >
-                        <ExternalLink size={12} />
+                        <FileText size={12} />
                         Open PDF
-                      </a>
+                      </button>
                     ) : (
                       <div className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs py-2 rounded-lg border border-gray-100 text-gray-300">
                         No PDF
@@ -739,12 +765,14 @@ export default function DocList({ sheetName, title }) {
                         </td>
                       ))}
                       <td className="px-4 py-3">
-                        {row["Drive Link"] ? (
-                          <a href={row["Drive Link"]} target="_blank" rel="noreferrer"
-                            className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors">
-                            <ExternalLink size={12} />
+                        {(getPrefill(row) || row["Drive Link"]) ? (
+                          <button
+                            onClick={() => openPDF(row)}
+                            className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors"
+                          >
+                            <FileText size={12} />
                             Open
-                          </a>
+                          </button>
                         ) : (
                           <span className="text-xs text-gray-300">—</span>
                         )}
