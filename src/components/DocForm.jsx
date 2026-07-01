@@ -36,7 +36,7 @@ export default function DocForm({
     notes:        initialData?.notes        || "",
     terms:        DEFAULT_TERMS.map(t => ({ ...t })),
     to:           initialData?.to           || { name: "", address: "", contact: "", email: "", attn: "" },
-    items:        initialData?.items        || [{ description: "", qty: 1, unit: "unit", unitPrice: 0, notes: "", isBold: false }],
+    items:        initialData?.items        || [{ description: "", qty: 1, unit: "unit", costPrice: 0, markupPercent: 0, unitPrice: 0, notes: "", isBold: false }],
   });
 
   function set(field, value) {
