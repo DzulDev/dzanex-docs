@@ -189,7 +189,13 @@ function addItemsTable(doc, items, y, showPrice, footLabel = "Total Amount") {
 
     autoTable(doc, {
       startY: y,
-      head: [["No.", "Items & Descriptions", "Quantity", "Price", "Amount"]],
+      head: [[
+        "No.",
+        "Items & Descriptions",
+        { content: "Quantity", styles: { halign: "center" } },
+        { content: "Price",    styles: { halign: "right"  } },
+        { content: "Amount",  styles: { halign: "right"  } },
+      ]],
       body: rows,
       foot: (() => {
         const rows = [];
