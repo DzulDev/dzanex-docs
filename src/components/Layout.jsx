@@ -376,13 +376,24 @@ export default function Layout({ children }) {
                   </div>
                 </div>
 
+                {/* Quotation Discount */}
+                <div>
+                  <h3 className="font-semibold text-[#1B3A5C] mb-3">Quotation — Discount</h3>
+                  <ul className="text-xs text-gray-500 space-y-1.5 ml-1">
+                    <li>Quotation form has a <span className="font-semibold text-gray-700">Discount (%)</span> field in the totals panel.</li>
+                    <li>Totals always show: <span className="font-semibold text-gray-700">Total → SST → Discount → Total Amount</span></li>
+                    <li>Discount is applied before SST — <span className="font-mono text-gray-700">Total Amount = (Subtotal − Discount) + SST</span></li>
+                    <li>Discount shows in the PDF footer breakdown and carries over when converting QT → Invoice.</li>
+                  </ul>
+                </div>
+
                 {/* PDF & Drive */}
                 <div>
                   <h3 className="font-semibold text-[#1B3A5C] mb-3">PDF & Google Drive</h3>
                   <ul className="text-xs text-gray-500 space-y-1.5 ml-1">
                     <li>Every saved document generates a PDF and uploads it to <span className="font-semibold text-gray-700">Google Drive</span> automatically.</li>
                     <li>PDFs are stored in folders: <span className="font-mono text-gray-700">Dzanex Docs / Quotation / Invoice / PO / DO / PV / Receipt / CreditNote</span></li>
-                    <li>Click <span className="font-semibold text-gray-700">Open PDF</span> (or <span className="font-semibold text-gray-700">Open</span> on desktop) in the document list to view the file in Google Drive.</li>
+                    <li>Click <span className="font-semibold text-gray-700">Open PDF</span> in the document list — PDF is <span className="font-semibold text-gray-700">regenerated with the current status badge</span> (colour-coded pill in top-right corner).</li>
                     <li>Use <span className="font-semibold text-gray-700">Preview PDF</span> button on the form to preview before saving.</li>
                     <li>All data is also saved to <span className="font-semibold text-gray-700">Google Sheets</span> — one tab per document type.</li>
                   </ul>
