@@ -151,6 +151,9 @@ function addItemsTable(doc, items, y, showPrice, footLabel = "Total Amount") {
     const discountAmt = subtotal * discount / 100;
     const afterDisc   = subtotal - discountAmt;
     const total       = afterDisc + afterDisc * taxRate / 100;
+    // Quotation / Invoice / Credit Note always list SST and Discount (even at 0%); PO always lists SST
+    const showSst  = taxRate > 0 || !!doc.__showSst || !!doc.__showAll;
+    const showDisc = discount > 0 || !!doc.__showAll;
 
     // Track items that need bold-main + normal-bullets split rendering
     const splitBold = {};
@@ -199,22 +202,22 @@ function addItemsTable(doc, items, y, showPrice, footLabel = "Total Amount") {
       body: rows,
       foot: (() => {
         const rows = [];
-        if (discount > 0 || taxRate > 0) {
+        if (showDisc || showSst) {
           rows.push([
             { content: "Total", colSpan: 4, styles: { halign: "right", fillColor: [...MGRAY], textColor: [...BLACK] } },
             { content: rm(subtotal), styles: { fillColor: [...MGRAY], textColor: [...BLACK], halign: "right" } },
           ]);
         }
-        if (taxRate > 0) {
+        if (showSst) {
           rows.push([
             { content: `SST (${taxRate}%)`, colSpan: 4, styles: { halign: "right", fillColor: [...MGRAY], textColor: [...BLACK] } },
             { content: rm(afterDisc * taxRate / 100), styles: { fillColor: [...MGRAY], textColor: [...BLACK], halign: "right" } },
           ]);
         }
-        if (discount > 0) {
+        if (showDisc) {
           rows.push([
             { content: `Discount (${discount}%)`, colSpan: 4, styles: { halign: "right", fillColor: [...MGRAY], textColor: [...BLACK] } },
-            { content: `- ${rm(discountAmt)}`, styles: { fillColor: [...MGRAY], textColor: [...BLACK], halign: "right" } },
+            { content: discount > 0 ? `- ${rm(discountAmt)}` : rm(0), styles: { fillColor: [...MGRAY], textColor: [...BLACK], halign: "right" } },
           ]);
         }
         rows.push([
@@ -444,6 +447,7 @@ function addFooter(doc) {
 
 export function generateQuotation(docData, logoDataUrl, stampDataUrl, signatureDataUrl) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
+  doc.__showAll = true;
   doc.__taxRate  = Number(docData.taxRate)  || 0;
   doc.__discount = Number(docData.discount) || 0;
 
@@ -461,6 +465,7 @@ export function generateQuotation(docData, logoDataUrl, stampDataUrl, signatureD
 
 export function generateInvoice(docData, logoDataUrl, stampDataUrl, signatureDataUrl) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
+  doc.__showAll = true;
   doc.__taxRate = Number(docData.taxRate) || 0;
   doc.__discount = Number(docData.discount) || 0;
   doc.__deposit  = Number(docData.depositPaid) || 0;
@@ -495,6 +500,7 @@ export function generateInvoice(docData, logoDataUrl, stampDataUrl, signatureDat
 
 export function generatePO(docData, logoDataUrl, stampDataUrl, signatureDataUrl) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
+  doc.__showSst = true;
   doc.__taxRate = Number(docData.taxRate) || 0;
 
   let y = addHeader(doc, "Purchase Order", docData.docNo, docData.date, logoDataUrl);
@@ -652,6 +658,7 @@ export function generatePaymentVoucher(docData, logoDataUrl, stampDataUrl, signa
 
 export function generateCreditNote(docData, logoDataUrl, stampDataUrl, signatureDataUrl) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
+  doc.__showAll = true;
   doc.__taxRate = Number(docData.taxRate) || 0;
   doc.__discount = Number(docData.discount) || 0;
   const pageW = doc.internal.pageSize.getWidth();

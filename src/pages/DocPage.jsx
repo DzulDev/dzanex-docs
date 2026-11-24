@@ -140,6 +140,7 @@ export default function DocPage({ title, prefix, sheetName, showPrice, showTax, 
             showTax={showTax}
             showValidUntil={showValidUntil}
             showDiscount={showValidUntil}
+            showDiscountRow={["Quotation", "Invoice", "CreditNote"].includes(sheetName)}
             partyLabel={partyLabel}
             onSave={handleSave}
             saving={saving}
