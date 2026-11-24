@@ -450,6 +450,7 @@ export function generateQuotation(docData, logoDataUrl, stampDataUrl, signatureD
 export function generateInvoice(docData, logoDataUrl, stampDataUrl, signatureDataUrl) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   doc.__taxRate = Number(docData.taxRate) || 0;
+  doc.__discount = Number(docData.discount) || 0;
 
   let y = addHeader(doc, "Invoice", docData.docNo, docData.date, logoDataUrl);
   y = addBillTo(doc, docData.to, docData.date, y);
@@ -638,6 +639,7 @@ export function generatePaymentVoucher(docData, logoDataUrl, stampDataUrl, signa
 export function generateCreditNote(docData, logoDataUrl, stampDataUrl, signatureDataUrl) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   doc.__taxRate = Number(docData.taxRate) || 0;
+  doc.__discount = Number(docData.discount) || 0;
   const pageW = doc.internal.pageSize.getWidth();
 
   let y = addHeader(doc, "Credit Note", docData.docNo, docData.date, logoDataUrl);
