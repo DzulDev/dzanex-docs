@@ -22,3 +22,31 @@ export function rowBalance(row) {
   const total = parseFloat(row?.Total) || 0;
   return Math.max(0, total - rowDeposit(row));
 }
+
+// Money actually received on an invoice row, as dated events (cash basis).
+// - Deposit counts on its deposit date, balance on the date it was marked Paid.
+// - Invoices with no deposit keep the old behaviour: full total on the invoice date once Paid.
+export function incomeEvents(row) {
+  const total = parseFloat(row?.Total) || 0;
+  let raw = {};
+  try { raw = JSON.parse(row?._raw || "{}"); } catch { /* ignore */ }
+  const dep  = Math.min(Number(raw.depositPaid) || 0, total);
+  const paid = row?.Status === "Paid";
+  const out  = [];
+  if (dep > 0) {
+    out.push({ date: raw.depositDate || row.Date || "", amount: dep, kind: "Deposit", row });
+    if (paid && total - dep > 0) out.push({ date: raw.paidDate || row.Date || "", amount: total - dep, kind: "Balance", row });
+  } else if (paid) {
+    out.push({ date: row.Date || "", amount: total, kind: "Full", row });
+  }
+  return out;
+}
+
+export function allIncomeEvents(rows) {
+  return (rows || []).flatMap(incomeEvents);
+}
+
+// Sum of income received in a period (prefix like "2026" or "2026-11")
+export function sumIncome(rows, prefix) {
+  return allIncomeEvents(rows).filter(e => e.date.startsWith(prefix)).reduce((s, e) => s + e.amount, 0);
+}

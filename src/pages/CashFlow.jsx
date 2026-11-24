@@ -4,6 +4,7 @@ import { RefreshCw, Printer } from "lucide-react";
 import { getConfig } from "../utils/storage";
 import { getRows, getToken, ensureSheetHasHeaders } from "../utils/google";
 import { fmtMYR } from "../utils/fmt";
+import { allIncomeEvents } from "../utils/invoice";
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
@@ -57,11 +58,12 @@ export default function CashFlow() {
   ].filter(y => y.length === 4))].sort((a, b) => b - a);
 
   // Paid rows filtered by selected year
-  const paidInv = data.invRows.filter(r => r.Status === "Paid" && (r.Date || "").startsWith(year));
-  const paidPO  = data.poRows.filter(r =>  r.Status === "Paid" && (r.Date || "").startsWith(year));
+  // Money received on invoices: deposits and balances count on the date they arrived
+  const inEvents = allIncomeEvents(data.invRows).filter(e => e.date.startsWith(year));
+  const paidPO = data.poRows.filter(r =>  r.Status === "Paid" && (r.Date || "").startsWith(year));
   const paidPV  = data.pvRows.filter(r =>  r.Status === "Paid" && (r.Date || "").startsWith(year));
 
-  const totalIn  = paidInv.reduce((s, r) => s + (parseFloat(r.Total)  || 0), 0);
+  const totalIn  = inEvents.reduce((s, e) => s + e.amount, 0);
   const totalOut = [
     ...paidPO.map(r => parseFloat(r.Total)  || 0),
     ...paidPV.map(r => parseFloat(r.Amount) || 0),
@@ -74,9 +76,9 @@ export default function CashFlow() {
     const ym = `${year}-${String(m).padStart(2, "0")}`;
     monthMap[ym] = { in: 0, out: 0 };
   }
-  paidInv.forEach(r => {
-    const ym = (r.Date || "").slice(0, 7);
-    if (monthMap[ym]) monthMap[ym].in += parseFloat(r.Total) || 0;
+  inEvents.forEach(e => {
+    const ym = e.date.slice(0, 7);
+    if (monthMap[ym]) monthMap[ym].in += e.amount;
   });
   paidPO.forEach(r => {
     const ym = (r.Date || "").slice(0, 7);
@@ -89,7 +91,7 @@ export default function CashFlow() {
 
   // Transaction list: all In + Out sorted by date desc
   const transactions = [
-    ...paidInv.map(r => ({ date: r.Date, docNo: r["Doc No"], label: r.Client || "—", amount: parseFloat(r.Total) || 0,  type: "in",  source: "Invoice" })),
+    ...inEvents.map(e => ({ date: e.date, docNo: e.row["Doc No"], label: e.row.Client || "—", amount: e.amount, type: "in", source: e.kind === "Full" ? "Invoice" : `Invoice (${e.kind})` })),
     ...paidPO.map(r =>  ({ date: r.Date, docNo: r["Doc No"], label: r.Supplier || "—", amount: parseFloat(r.Total) || 0, type: "out", source: "PO" })),
     ...paidPV.map(r =>  ({ date: r.Date, docNo: r["Doc No"], label: r["Paid To"] || "—", amount: parseFloat(r.Amount) || 0, type: "out", source: "PV" })),
   ].sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -139,7 +141,7 @@ export default function CashFlow() {
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <p className="text-[11px] text-gray-400 mb-1">Money In</p>
           <p className="text-sm font-bold text-green-600 leading-tight">{fmtMYR(totalIn)}</p>
-          <p className="text-[10px] text-gray-400 mt-0.5">{paidInv.length} paid invoice{paidInv.length !== 1 ? "s" : ""}</p>
+          <p className="text-[10px] text-gray-400 mt-0.5">{inEvents.length} payment{inEvents.length !== 1 ? "s" : ""} received</p>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <p className="text-[11px] text-gray-400 mb-1">Money Out</p>

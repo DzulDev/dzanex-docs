@@ -43,7 +43,7 @@ export default function DocPage({ title, prefix, sheetName, showPrice, showTax, 
       }
     }
     init();
-  }, []);
+  }, [navigate, prefix, sheetName]);
 
   async function handleSave(formData) {
     const action = formData._action;

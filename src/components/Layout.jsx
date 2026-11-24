@@ -264,7 +264,7 @@ export default function Layout({ children }) {
                     <li>The invoice PDF then shows <span className="font-semibold text-gray-700">Deposit Paid</span> and <span className="font-semibold text-gray-700">Balance Due</span> lines — click Open PDF to get the updated copy for the client.</li>
                     <li>After delivery, balance arrives: mark invoice <span className="font-semibold text-gray-700">Paid</span>. The popup creates the <span className="font-semibold text-gray-700">balance receipt</span> (invoice total − deposit) automatically.</li>
                     <li>Client pays everything upfront? Mark Paid once — one receipt for the full amount.</li>
-                    <li className="text-gray-400">Dashboard "To Collect" and Aging count only the balance still owed. Income still counts an invoice only once it is marked Paid.</li>
+                    <li className="text-gray-400">Dashboard "To Collect" and Aging count only the balance still owed. Income, Cash Flow and P&L count the deposit in the month it was received, and the balance in the month the invoice is marked Paid.</li>
                   </ul>
                 </div>
 

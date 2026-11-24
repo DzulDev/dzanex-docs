@@ -4,7 +4,7 @@ import { RefreshCw, Printer } from "lucide-react";
 import { getConfig } from "../utils/storage";
 import { getRows, getToken, ensureSheetHasHeaders } from "../utils/google";
 import { fmtMYR } from "../utils/fmt";
-import { rowBalance, rowDeposit } from "../utils/invoice";
+import { rowBalance, rowDeposit, allIncomeEvents } from "../utils/invoice";
 import { pvCategory, PO_CATEGORY } from "../utils/categories";
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -292,11 +292,11 @@ function PLTab({ data }) {
     ...data.pvRows.map(r =>  (r.Date || "").slice(0, 4)),
   ].filter(y => y.length === 4))].sort((a, b) => b - a);
 
-  const paidInv = data.invRows.filter(r => r.Status === "Paid" && (r.Date || "").startsWith(year));
+  const inEvents = allIncomeEvents(data.invRows).filter(e => e.date.startsWith(year)); // deposits + balances by date received
   const paidPO  = data.poRows.filter(r =>  r.Status === "Paid" && (r.Date || "").startsWith(year));
   const paidPV  = data.pvRows.filter(r =>  r.Status === "Paid" && (r.Date || "").startsWith(year));
 
-  const totalRevenue  = paidInv.reduce((s, r) => s + (parseFloat(r.Total)  || 0), 0);
+  const totalRevenue  = inEvents.reduce((s, e) => s + e.amount, 0);
   const totalExpenses = [
     ...paidPO.map(r => parseFloat(r.Total)  || 0),
     ...paidPV.map(r => parseFloat(r.Amount) || 0),
@@ -315,7 +315,7 @@ function PLTab({ data }) {
     const ym = `${year}-${String(m).padStart(2, "0")}`;
     monthMap[ym] = { revenue: 0, expenses: 0 };
   }
-  paidInv.forEach(r => { const ym = (r.Date || "").slice(0, 7); if (monthMap[ym]) monthMap[ym].revenue  += parseFloat(r.Total)  || 0; });
+  inEvents.forEach(e => { const ym = e.date.slice(0, 7); if (monthMap[ym]) monthMap[ym].revenue += e.amount; });
   paidPO.forEach(r =>  { const ym = (r.Date || "").slice(0, 7); if (monthMap[ym]) monthMap[ym].expenses += parseFloat(r.Total)  || 0; });
   paidPV.forEach(r =>  { const ym = (r.Date || "").slice(0, 7); if (monthMap[ym]) monthMap[ym].expenses += parseFloat(r.Amount) || 0; });
 

@@ -33,7 +33,6 @@ export default function PaymentVoucherPage() {
     notes:     "",
   });
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     async function init() {
       const { sheetId, logoDataUrl, stampDataUrl, signatureDataUrl } = getConfig();
@@ -53,7 +52,7 @@ export default function PaymentVoucherPage() {
       }
     }
     init();
-  }, []);
+  }, [navigate]);
 
   function set(field, value) {
     setForm(f => ({ ...f, [field]: value }));

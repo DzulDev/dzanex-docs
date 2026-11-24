@@ -5,7 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recha
 import { getConfig } from "../utils/storage";
 import { getRows, getToken, ensureSheetHasHeaders } from "../utils/google";
 import { fmtMYR } from "../utils/fmt";
-import { rowBalance } from "../utils/invoice";
+import { rowBalance, sumIncome } from "../utils/invoice";
 
 const DOC_TYPES = [
   { key: "Quotation", label: "Quotation",       icon: FileText,     path: "/quotation", statuses: ["Pending", "Accepted", "Rejected"] },
@@ -50,9 +50,7 @@ function getMonthlyData(allData) {
     const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
     const prefix = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     const label = d.toLocaleString("default", { month: "short" });
-    const income = allData.Invoice
-      .filter(r => r.Status === "Paid" && (r.Date || "").startsWith(prefix))
-      .reduce((s, r) => s + (parseFloat(r.Total) || 0), 0);
+    const income = sumIncome(allData.Invoice, prefix);
     const expenses = [
       ...allData.PO.filter(r => r.Status === "Paid" && (r.Date || "").startsWith(prefix)).map(r => parseFloat(r.Total) || 0),
       ...allData.PV.filter(r => r.Status === "Paid" && (r.Date || "").startsWith(prefix)).map(r => parseFloat(r.Amount) || 0),
@@ -170,9 +168,7 @@ setAllData({ Quotation: qt, Invoice: inv, PO: po, DO: doRows, PV: pv, Receipt: r
   const depositINVValue = allData.Invoice.filter(r => r.Status === "Deposit Paid").reduce((s, r) => s + rowBalance(r), 0);
   const toCollect       = pendingINVValue + overdueINVValue + depositINVValue;
 
-  const paidThisMonth   = allData.Invoice
-    .filter(r => r.Status === "Paid" && (r.Date || "").startsWith(selectedMonth))
-    .reduce((s, r) => s + (parseFloat(r.Total) || 0), 0);
+  const paidThisMonth   = sumIncome(allData.Invoice, selectedMonth);
 
   const spentThisMonth  = [
     ...allData.PO.filter(r => r.Status === "Paid" && (r.Date || "").startsWith(selectedMonth)).map(r => parseFloat(r.Total)  || 0),
@@ -182,9 +178,7 @@ setAllData({ Quotation: qt, Invoice: inv, PO: po, DO: doRows, PV: pv, Receipt: r
   const netThisMonth    = paidThisMonth - spentThisMonth;
 
   // YTD profit
-  const ytdIncome     = allData.Invoice
-    .filter(r => r.Status === "Paid" && (r.Date || "").startsWith(selectedYear))
-    .reduce((s, r) => s + (parseFloat(r.Total) || 0), 0);
+  const ytdIncome     = sumIncome(allData.Invoice, selectedYear);
   const ytdExpenses   = [
     ...allData.PO.filter(r => r.Status === "Paid" && (r.Date || "").startsWith(selectedYear)).map(r => parseFloat(r.Total)  || 0),
     ...allData.PV.filter(r => r.Status === "Paid" && (r.Date || "").startsWith(selectedYear)).map(r => parseFloat(r.Amount) || 0),

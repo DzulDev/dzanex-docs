@@ -358,6 +358,19 @@ export default function DocList({ sheetName, title }) {
       if (sheetName === "Invoice" && newStatus === "Paid") {
         const localDate = new Date();
         const dateStr = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, "0")}-${String(localDate.getDate()).padStart(2, "0")}`;
+        // Invoice had a deposit: remember when the balance arrived so Cash Flow/P&L put it in the right month
+        const pf = getPrefill(row);
+        if (pf && Number(pf.depositPaid) > 0) {
+          try {
+            const rawCol = await getColLetter(sheetId, "Invoice", "_raw", token);
+            if (rawCol) {
+              const rawJson = JSON.stringify({ ...pf, paidDate: dateStr });
+              await updateCell(sheetId, "Invoice", row._rowNum, rawCol, rawJson, token);
+              if (pf.docNo) localStorage.setItem(`dzanex_doc_${pf.docNo}`, rawJson);
+              setRows(prev => prev.map(r => r._rowNum === row._rowNum ? { ...r, _raw: rawJson } : r));
+            }
+          } catch (err) { console.error("Could not save paid date:", err); }
+        }
         setReceiptPrompt({ row, paymentMethod: "Bank Transfer", reference: "", date: dateStr, createDO: false });
       }
     } catch (e) {

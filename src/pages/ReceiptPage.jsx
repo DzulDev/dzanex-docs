@@ -57,7 +57,7 @@ export default function ReceiptPage() {
       }
     }
     init();
-  }, []);
+  }, [navigate]);
 
   function set(field, value) {
     setForm(f => ({ ...f, [field]: value }));
