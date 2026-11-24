@@ -290,6 +290,7 @@ export default function Layout({ children }) {
                         <span className="text-gray-400">— no PO needed, saves as Paid immediately</span>
                       </div>
                       <p className="text-gray-400 mt-2">PV attachments: Receipt/Invoice · Payment Proof</p>
+                      <p className="text-gray-400 mt-1">Pick an <span className="font-semibold text-gray-500">Expense Category</span> on every PV — P&L report shows spending per category. Mileage / no-receipt claims: put distance × rate in the purpose and attach your trip log.</p>
                     </div>
                   </div>
                 </div>

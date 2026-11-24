@@ -10,6 +10,7 @@ import {
 import { generatePaymentVoucher } from "../utils/pdf";
 import { showToast } from "../utils/toast";
 import { fmt2 } from "../utils/fmt";
+import { EXPENSE_CATEGORIES } from "../utils/categories";
 
 export default function PaymentVoucherPage() {
   const navigate  = useNavigate();
@@ -26,6 +27,7 @@ export default function PaymentVoucherPage() {
     date:      new Date().toISOString().split("T")[0],
     paidTo:    fromState?.paidTo   || { name: "", bank: "", accountNo: "" },
     purpose:   fromState?.purpose  || "",
+    category:  fromState?.category || "",
     amount:    fromState?.amount   || "",
     reference: "",
     notes:     "",
@@ -69,6 +71,11 @@ export default function PaymentVoucherPage() {
 
     if (action === "preview") {
       window.open(URL.createObjectURL(new Blob([pdfBytes], { type: "application/pdf" })), "_blank");
+      return;
+    }
+
+    if (!form.category) {
+      showToast("Please choose an expense category.", "error");
       return;
     }
 
@@ -191,6 +198,14 @@ export default function PaymentVoucherPage() {
                   <label className="label">Purpose / Description *</label>
                   <input className="input" placeholder="e.g. Consultation Fee – IT Support"
                     value={form.purpose} onChange={e => set("purpose", e.target.value)} />
+                </div>
+                <div>
+                  <label className="label">Expense Category *</label>
+                  <select className="input" value={form.category}
+                    onChange={e => set("category", e.target.value)}>
+                    <option value="">Select category…</option>
+                    {EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
                 </div>
                 <div>
                   <label className="label">Amount (RM) *</label>

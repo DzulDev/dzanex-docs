@@ -571,7 +571,7 @@ export function generatePaymentVoucher(docData, logoDataUrl, stampDataUrl, signa
     startY: y,
     head: [["Description / Purpose", "Amount (RM)"]],
     body: [[
-      docData.purpose || "",
+      docData.category ? `${docData.purpose || ""}\nCategory: ${docData.category}` : (docData.purpose || ""),
       { content: rm(docData.amount), styles: { halign: "right", fontStyle: "bold" } },
     ]],
     foot: [[

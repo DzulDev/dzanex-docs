@@ -5,6 +5,7 @@ import { getConfig } from "../utils/storage";
 import { getRows, getToken, ensureSheetHasHeaders } from "../utils/google";
 import { fmtMYR } from "../utils/fmt";
 import { rowBalance, rowDeposit } from "../utils/invoice";
+import { pvCategory, PO_CATEGORY } from "../utils/categories";
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
@@ -303,6 +304,12 @@ function PLTab({ data }) {
   const grossProfit = totalRevenue - totalExpenses;
   const margin = totalRevenue > 0 ? ((grossProfit / totalRevenue) * 100).toFixed(1) : "—";
 
+  // Expenses grouped by category (PV category; all POs grouped together)
+  const catMap = {};
+  paidPO.forEach(r => { catMap[PO_CATEGORY] = (catMap[PO_CATEGORY] || 0) + (parseFloat(r.Total) || 0); });
+  paidPV.forEach(r => { const c = pvCategory(r); catMap[c] = (catMap[c] || 0) + (parseFloat(r.Amount) || 0); });
+  const catRows = Object.entries(catMap).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+
   const monthMap = {};
   for (let m = 1; m <= 12; m++) {
     const ym = `${year}-${String(m).padStart(2, "0")}`;
@@ -396,6 +403,44 @@ function PLTab({ data }) {
             </tfoot>
           </table>
         </div>
+      </div>
+
+      {/* Expenses by category */}
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="px-4 py-3 border-b border-gray-100">
+          <h2 className="text-sm font-semibold text-gray-700">Expenses by Category — {year}</h2>
+        </div>
+        {catRows.length === 0 ? (
+          <p className="px-4 py-6 text-xs text-gray-400 text-center">No paid expenses this year.</p>
+        ) : (
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="bg-[#1B3A5C] text-white">
+                <th className="text-left px-4 py-2.5 font-semibold">Category</th>
+                <th className="text-right px-4 py-2.5 font-semibold">Amount</th>
+                <th className="text-right px-4 py-2.5 font-semibold">% of Expenses</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {catRows.map(([cat, amt]) => (
+                <tr key={cat}>
+                  <td className="px-4 py-2.5 text-gray-700">{cat}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums text-red-500">{fmtMYR(amt)}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums text-gray-500">
+                    {totalExpenses > 0 ? `${((amt / totalExpenses) * 100).toFixed(1)}%` : "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="bg-gray-50 border-t-2 border-gray-200 font-bold">
+                <td className="px-4 py-2.5 text-gray-700">Total</td>
+                <td className="px-4 py-2.5 text-right tabular-nums text-red-500">{fmtMYR(totalExpenses)}</td>
+                <td className="px-4 py-2.5" />
+              </tr>
+            </tfoot>
+          </table>
+        )}
       </div>
     </div>
   );
