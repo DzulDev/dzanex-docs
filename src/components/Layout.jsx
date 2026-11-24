@@ -247,6 +247,26 @@ export default function Layout({ children }) {
                   </ul>
                 </div>
 
+                {/* Deposit job flow */}
+                <div>
+                  <h3 className="font-semibold text-[#1B3A5C] mb-3">Job with Deposit (e.g. 50%)</h3>
+                  <div className="flex items-center gap-2 flex-wrap mb-3">
+                    {["QT accepted", "→", "Full INV", "→", "Deposit paid → Receipt", "→", "DO", "→", "Balance paid → Receipt"].map((s, i) => (
+                      s === "→"
+                        ? <span key={i} className="text-gray-300 font-bold">→</span>
+                        : <span key={i} className="text-xs font-medium px-3 py-1 rounded-full bg-[#1B3A5C] text-white">{s}</span>
+                    ))}
+                  </div>
+                  <ul className="text-xs text-gray-500 space-y-1.5 ml-1">
+                    <li>Convert QT → Invoice for the <span className="font-semibold text-gray-700">full amount</span> — client already agreed to the price.</li>
+                    <li>Write the deposit in <span className="font-semibold text-gray-700">Payment Terms</span>, e.g. <span className="font-mono text-gray-700">Deposit: MYR 500.00 (50%). Balance MYR 500.00 on delivery.</span></li>
+                    <li>When deposit arrives: click <span className="font-semibold text-gray-700">Skip</span> on the Paid popup (invoice is not fully paid yet), then Convert → Issue Receipt and change the item amount to the deposit only.</li>
+                    <li>After delivery, balance arrives: mark invoice <span className="font-semibold text-gray-700">Paid</span> and issue a second receipt for the balance.</li>
+                    <li>Client pays everything upfront? Mark Paid once — one receipt for the full amount.</li>
+                    <li className="text-gray-400">Keep the invoice Pending until the balance is paid so Dashboard "To Collect" stays correct.</li>
+                  </ul>
+                </div>
+
                 {/* Supplier flow */}
                 <div>
                   <h3 className="font-semibold text-[#1B3A5C] mb-3">Supplier / Expense Flow</h3>
