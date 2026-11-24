@@ -5,6 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recha
 import { getConfig } from "../utils/storage";
 import { getRows, getToken, ensureSheetHasHeaders } from "../utils/google";
 import { fmtMYR } from "../utils/fmt";
+import { rowBalance } from "../utils/invoice";
 
 const DOC_TYPES = [
   { key: "Quotation", label: "Quotation",       icon: FileText,     path: "/quotation", statuses: ["Pending", "Accepted", "Rejected"] },
@@ -163,10 +164,10 @@ setAllData({ Quotation: qt, Invoice: inv, PO: po, DO: doRows, PV: pv, Receipt: r
   };
 
   // Financial metrics
-  const pendingINVValue = allData.Invoice.filter(r => !r.Status || r.Status === "Pending").reduce((s, r) => s + (parseFloat(r.Total) || 0), 0);
-  const overdueINVValue = allData.Invoice.filter(r => r.Status === "Overdue").reduce((s, r) => s + (parseFloat(r.Total) || 0), 0);
-  // Deposit Paid invoices are still owed the balance (deposit amount isn't tracked, so full total is counted)
-  const depositINVValue = allData.Invoice.filter(r => r.Status === "Deposit Paid").reduce((s, r) => s + (parseFloat(r.Total) || 0), 0);
+  // Unpaid invoices count only what is still owed (invoice total minus any deposit received)
+  const pendingINVValue = allData.Invoice.filter(r => !r.Status || r.Status === "Pending").reduce((s, r) => s + rowBalance(r), 0);
+  const overdueINVValue = allData.Invoice.filter(r => r.Status === "Overdue").reduce((s, r) => s + rowBalance(r), 0);
+  const depositINVValue = allData.Invoice.filter(r => r.Status === "Deposit Paid").reduce((s, r) => s + rowBalance(r), 0);
   const toCollect       = pendingINVValue + overdueINVValue + depositINVValue;
 
   const paidThisMonth   = allData.Invoice

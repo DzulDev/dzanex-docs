@@ -260,10 +260,11 @@ export default function Layout({ children }) {
                   <ul className="text-xs text-gray-500 space-y-1.5 ml-1">
                     <li>Convert QT → Invoice for the <span className="font-semibold text-gray-700">full amount</span> — client already agreed to the price.</li>
                     <li>Write the deposit in <span className="font-semibold text-gray-700">Payment Terms</span>, e.g. <span className="font-mono text-gray-700">Deposit: MYR 500.00 (50%). Balance MYR 500.00 on delivery.</span></li>
-                    <li>When deposit arrives: set invoice status to <span className="font-semibold text-gray-700">Deposit Paid</span>, then Convert → Issue Receipt and change the item amount to the deposit only.</li>
-                    <li>After delivery, balance arrives: mark invoice <span className="font-semibold text-gray-700">Paid</span> and click <span className="font-semibold text-gray-700">Skip</span> on the popup if you already issued the balance receipt manually.</li>
+                    <li>When deposit arrives: set invoice status to <span className="font-semibold text-gray-700">Deposit Paid</span>. A popup asks for the <span className="font-semibold text-gray-700">deposit amount</span> and creates a deposit receipt (<span className="font-mono text-gray-700">REC-2026-005-D</span>) for you.</li>
+                    <li>The invoice PDF then shows <span className="font-semibold text-gray-700">Deposit Paid</span> and <span className="font-semibold text-gray-700">Balance Due</span> lines — click Open PDF to get the updated copy for the client.</li>
+                    <li>After delivery, balance arrives: mark invoice <span className="font-semibold text-gray-700">Paid</span>. The popup creates the <span className="font-semibold text-gray-700">balance receipt</span> (invoice total − deposit) automatically.</li>
                     <li>Client pays everything upfront? Mark Paid once — one receipt for the full amount.</li>
-                    <li className="text-gray-400">Deposit Paid invoices stay in Dashboard "To Collect" and Aging (counted at the full invoice total, since the deposit amount isn't tracked). Income only counts once marked Paid.</li>
+                    <li className="text-gray-400">Dashboard "To Collect" and Aging count only the balance still owed. Income still counts an invoice only once it is marked Paid.</li>
                   </ul>
                 </div>
 
@@ -355,7 +356,7 @@ export default function Layout({ children }) {
                     {[
                       ["Pending",      "Not yet paid / not yet actioned"],
                       ["Paid",         "Money received (Invoice) or money sent (PO/PV)"],
-                      ["Deposit Paid", "Deposit paid, balance still owed — Invoice: client paid deposit; PO: you paid supplier deposit"],
+                      ["Deposit Paid", "Deposit paid, balance still owed — Invoice: client paid deposit (amount recorded); PO: you paid supplier deposit"],
                       ["Overdue",      "Invoice past due, still unpaid — shows as alert on Dashboard"],
                       ["Accepted",     "Client agreed to the Quotation"],
                       ["Rejected",     "Client rejected the Quotation"],

@@ -4,6 +4,7 @@ import { RefreshCw, Printer } from "lucide-react";
 import { getConfig } from "../utils/storage";
 import { getRows, getToken, ensureSheetHasHeaders } from "../utils/google";
 import { fmtMYR } from "../utils/fmt";
+import { rowBalance, rowDeposit } from "../utils/invoice";
 
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
@@ -63,7 +64,8 @@ function StatementTab({ data }) {
 
   const invRows     = rows.filter(r => r._type === "Invoice");
   const totalBilled = invRows.reduce((s, r) => s + r._amount, 0);
-  const totalPaid   = invRows.filter(r => r.Status === "Paid").reduce((s, r) => s + r._amount, 0);
+  // Fully paid invoices count in full; part-paid invoices count the deposit received
+  const totalPaid   = invRows.reduce((s, r) => s + (r.Status === "Paid" ? r._amount : Math.min(rowDeposit(r), r._amount)), 0);
   const balance     = totalBilled - totalPaid;
 
   return (
@@ -184,7 +186,7 @@ function AgingTab({ data }) {
     const c = r.Client || "Unknown";
     if (!clientMap[c]) clientMap[c] = { b0: 0, b30: 0, b60: 0, b90: 0 };
     const days = daysSince(r.Date);
-    const amt  = parseFloat(r.Total) || 0;
+    const amt  = rowBalance(r);
     if      (days <= 30) clientMap[c].b0  += amt;
     else if (days <= 60) clientMap[c].b30 += amt;
     else if (days <= 90) clientMap[c].b60 += amt;

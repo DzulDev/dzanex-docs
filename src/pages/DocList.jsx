@@ -14,6 +14,7 @@ const GENERATE_FN = {
   Receipt:    generateReceipt,
 };
 import { showToast } from "../utils/toast";
+import { invoiceTotals } from "../utils/invoice";
 import { ChevronDown, FileText, Loader2, Paperclip, RefreshCw, Trash2, Receipt } from "lucide-react";
 
 const PAYMENT_METHODS = ["Bank Transfer", "Cash", "Cheque", "Online Transfer", "Credit Card", "Other"];
@@ -174,7 +175,9 @@ const STATUS_DOT = {
   Voided:       "bg-gray-300",
 };
 
-async function autoCreateReceipt(row, paymentMethod, reference, date) {
+// opts.deposit = { amount } → issue a DEPOSIT receipt (number gets "-D" suffix, e.g. REC-2026-005-D).
+// Otherwise, if the invoice already has a deposit, this issues the BALANCE receipt (invoice total − deposit).
+async function autoCreateReceipt(row, paymentMethod, reference, date, opts = {}) {
   const { sheetId, driveFolderId, logoDataUrl, stampDataUrl, signatureDataUrl } = getConfig();
   const token = getToken();
   if (!sheetId || !token) return;
@@ -183,21 +186,31 @@ async function autoCreateReceipt(row, paymentMethod, reference, date) {
   const invoiceDocNo = prefill?.docNo || row["Doc No"] || "";
   const parts = invoiceDocNo.split("-");
   if (parts.length < 3) return;
-  const receiptDocNo = `REC-${parts[1]}-${parts[2]}`;
+  const isDeposit   = !!opts.deposit;
+  const receiptDocNo = `REC-${parts[1]}-${parts[2]}${isDeposit ? "-D" : ""}`;
 
   const today   = date || (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; })();
   const client  = prefill?.to?.name || row["Client"] || "";
-  const discount = Number(prefill?.discount) || 0;
-  const gross   = prefill?.items?.reduce((s, i) => s + Number(i.qty||0)*Number(i.unitPrice||0), 0);
-  const amount  = (gross != null ? (gross * (1 - discount / 100)).toFixed(2) : null) || row["Total"] || "0.00";
+  const t       = invoiceTotals(prefill);
 
-  const items = (prefill?.items || []).filter(i => i.description?.trim());
+  let amount, discount, items, paymentType;
+  if (isDeposit) {
+    paymentType = "deposit"; amount = Number(opts.deposit.amount).toFixed(2); discount = 0; items = [];
+  } else if (t.deposit > 0) {
+    paymentType = "balance"; amount = t.balance.toFixed(2); discount = 0; items = [];
+  } else {
+    discount = Number(prefill?.discount) || 0;
+    const gross = prefill?.items?.reduce((s, i) => s + Number(i.qty||0)*Number(i.unitPrice||0), 0);
+    amount = (gross != null ? (gross * (1 - discount / 100)).toFixed(2) : null) || row["Total"] || "0.00";
+    items = (prefill?.items || []).filter(i => i.description?.trim());
+  }
 
   const docData = {
     docNo: receiptDocNo, date: today, client, amount, discount,
     paymentMethod: paymentMethod || "Bank Transfer",
     invoiceRef: invoiceDocNo,
     items, reference: reference || "", notes: "",
+    ...(paymentType ? { paymentType } : {}),
   };
 
   try {
@@ -287,6 +300,8 @@ export default function DocList({ sheetName, title }) {
   const [openConvert,   setOpenConvert]   = useState(null);
   const [convertPos,    setConvertPos]    = useState(null);
   const [receiptPrompt, setReceiptPrompt] = useState(null);
+  const [depositPrompt, setDepositPrompt] = useState(null);
+  const [savingDeposit, setSavingDeposit] = useState(false);
   const [uploading, setUploading] = useState(null);
 
   const navigate = useNavigate();
@@ -320,6 +335,20 @@ export default function DocList({ sheetName, title }) {
     const col = STATUS_COL[sheetName];
     if (!col || !sheetId || !token) return;
     closeAll();
+
+    // Invoice → Deposit Paid: ask for the deposit amount first; status is applied on confirm
+    if (sheetName === "Invoice" && newStatus === "Deposit Paid") {
+      const t = invoiceTotals(getPrefill(row));
+      const d = new Date();
+      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      setDepositPrompt({
+        row, total: t.total || parseFloat(row["Total"]) || 0,
+        amount: t.deposit > 0 ? String(t.deposit) : "", date: dateStr,
+        paymentMethod: "Bank Transfer", reference: "", createReceipt: true,
+      });
+      return;
+    }
+
     setUpdating(row._rowNum);
     try {
       await updateCell(sheetId, sheetName, row._rowNum, col, newStatus, token);
@@ -336,6 +365,44 @@ export default function DocList({ sheetName, title }) {
       showToast("Status update failed — check connection.", "error");
     } finally {
       setUpdating(null);
+    }
+  }
+
+  async function confirmDeposit() {
+    const p = depositPrompt;
+    const amount = Number(p.amount);
+    if (!(amount > 0)) { showToast("Enter the deposit amount.", "error"); return; }
+    if (p.total > 0 && amount >= p.total) { showToast("Deposit must be less than the invoice total — use Paid instead.", "error"); return; }
+
+    const { sheetId } = getConfig();
+    const token = getToken();
+    const row = p.row;
+    const prefill = getPrefill(row);
+    if (!sheetId || !token) return;
+    if (!prefill) { showToast("This invoice has no saved data to store the deposit in.", "error"); return; }
+
+    setSavingDeposit(true);
+    try {
+      const rawCol = await getColLetter(sheetId, "Invoice", "_raw", token);
+      if (!rawCol) throw new Error("_raw column not found");
+      const updated = { ...prefill, depositPaid: amount, depositDate: p.date };
+      const rawJson = JSON.stringify(updated);
+      await updateCell(sheetId, "Invoice", row._rowNum, STATUS_COL.Invoice, "Deposit Paid", token);
+      await updateCell(sheetId, "Invoice", row._rowNum, rawCol, rawJson, token);
+      const docNo = prefill.docNo || row["Doc No"] || "";
+      if (docNo) localStorage.setItem(`dzanex_doc_${docNo}`, rawJson);
+      const newRow = { ...row, Status: "Deposit Paid", _raw: rawJson };
+      setRows(prev => prev.map(r => r._rowNum === row._rowNum ? newRow : r));
+      showToast(`${docNo} → Deposit Paid (MYR ${amount.toFixed(2)})`);
+      setDepositPrompt(null);
+      if (p.createReceipt) {
+        await autoCreateReceipt(newRow, p.paymentMethod, p.reference, p.date, { deposit: { amount } });
+      }
+    } catch (e) {
+      console.error(e);
+      showToast("Could not save deposit — check connection.", "error");
+    } finally {
+      setSavingDeposit(false);
     }
   }
 
@@ -476,6 +543,68 @@ export default function DocList({ sheetName, title }) {
 
   return (
     <div>
+      {/* Deposit received prompt */}
+      {depositPrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
+            <h3 className="font-semibold text-gray-800 mb-1">Deposit Received</h3>
+            <p className="text-xs text-gray-400 mb-5">
+              <span className="font-mono font-semibold text-blue-700">{getPrefill(depositPrompt.row)?.docNo || depositPrompt.row["Doc No"]}</span>
+              {" "}— invoice total MYR {depositPrompt.total.toFixed(2)}
+            </p>
+            <div className="space-y-3">
+              <div>
+                <label className="label">Deposit Amount (MYR)</label>
+                <input
+                  type="number" min="0" step="0.01" className="input" autoFocus
+                  placeholder={`e.g. ${(depositPrompt.total / 2).toFixed(2)}`}
+                  value={depositPrompt.amount}
+                  onChange={e => setDepositPrompt(p => ({ ...p, amount: e.target.value }))}
+                />
+                {Number(depositPrompt.amount) > 0 && depositPrompt.total > 0 && (
+                  <p className="text-[11px] text-gray-400 mt-1">
+                    Balance due: MYR {Math.max(0, depositPrompt.total - Number(depositPrompt.amount)).toFixed(2)}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="label">Payment Date</label>
+                <input type="date" className="input" value={depositPrompt.date}
+                  onChange={e => setDepositPrompt(p => ({ ...p, date: e.target.value }))} />
+              </div>
+              <div>
+                <label className="label">Payment Method</label>
+                <select className="input" value={depositPrompt.paymentMethod}
+                  onChange={e => setDepositPrompt(p => ({ ...p, paymentMethod: e.target.value }))}>
+                  {PAYMENT_METHODS.map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="label">Transfer Reference <span className="text-gray-400 font-normal">(optional)</span></label>
+                <input className="input" value={depositPrompt.reference}
+                  onChange={e => setDepositPrompt(p => ({ ...p, reference: e.target.value }))} />
+              </div>
+              <label className="flex items-center gap-3 cursor-pointer border border-gray-200 rounded-xl p-3">
+                <input type="checkbox" checked={depositPrompt.createReceipt}
+                  onChange={e => setDepositPrompt(p => ({ ...p, createReceipt: e.target.checked }))}
+                  className="w-4 h-4 rounded accent-[#1B3A5C] shrink-0" />
+                <span className="text-xs font-semibold text-gray-700">Also create deposit receipt (REC-…-D)</span>
+              </label>
+            </div>
+            <div className="flex gap-2 mt-5">
+              <button onClick={() => setDepositPrompt(null)} disabled={savingDeposit}
+                className="flex-1 px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50">
+                Cancel
+              </button>
+              <button onClick={confirmDeposit} disabled={savingDeposit}
+                className="flex-1 px-4 py-2 rounded-lg bg-[#1B3A5C] text-white text-sm font-medium hover:bg-[#1B3A5C]/90 disabled:opacity-50">
+                {savingDeposit ? "Saving…" : "Save Deposit"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Receipt auto-create prompt */}
       {receiptPrompt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
@@ -489,6 +618,14 @@ export default function DocList({ sheetName, title }) {
             <p className="text-xs text-gray-400 mb-5 ml-12">
               Auto-generate receipt for <span className="font-mono font-semibold text-blue-700">{getPrefill(receiptPrompt.row)?.docNo || receiptPrompt.row["Doc No"] || "this invoice"}</span>
             </p>
+            {(() => {
+              const t = invoiceTotals(getPrefill(receiptPrompt.row));
+              return t.deposit > 0 ? (
+                <p className="text-xs text-cyan-700 bg-cyan-50 border border-cyan-200 rounded-lg px-3 py-2 mb-4">
+                  Deposit MYR {t.deposit.toFixed(2)} already received — this creates the <b>balance</b> receipt of MYR {t.balance.toFixed(2)}.
+                </p>
+              ) : null;
+            })()}
 
             <div className="space-y-3">
               <div>

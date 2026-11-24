@@ -221,6 +221,18 @@ function addItemsTable(doc, items, y, showPrice, footLabel = "Total Amount") {
           { content: footLabel, colSpan: 4, styles: { halign: "right", fontStyle: "bold", fillColor: [...MGRAY], textColor: [...BLACK] } },
           { content: rm(total), styles: { fontStyle: "bold", fillColor: [...MGRAY], textColor: [...BLACK], halign: "right" } },
         ]);
+        const deposit = doc.__deposit || 0;
+        if (deposit > 0) {
+          const balance = doc.__settled ? 0 : Math.max(0, total - deposit);
+          rows.push([
+            { content: "Deposit Paid", colSpan: 4, styles: { halign: "right", fillColor: [...MGRAY], textColor: [...BLACK] } },
+            { content: `- ${rm(deposit)}`, styles: { fillColor: [...MGRAY], textColor: [...BLACK], halign: "right" } },
+          ]);
+          rows.push([
+            { content: "Balance Due", colSpan: 4, styles: { halign: "right", fontStyle: "bold", fillColor: [...MGRAY], textColor: [...BLACK] } },
+            { content: rm(balance), styles: { fontStyle: "bold", fillColor: [...MGRAY], textColor: [...BLACK], halign: "right" } },
+          ]);
+        }
         return rows;
       })(),
       showFoot:           "lastPage",
@@ -451,6 +463,8 @@ export function generateInvoice(docData, logoDataUrl, stampDataUrl, signatureDat
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   doc.__taxRate = Number(docData.taxRate) || 0;
   doc.__discount = Number(docData.discount) || 0;
+  doc.__deposit  = Number(docData.depositPaid) || 0;
+  doc.__settled  = docData.status === "Paid";
 
   let y = addHeader(doc, "Invoice", docData.docNo, docData.date, logoDataUrl);
   y = addBillTo(doc, docData.to, docData.date, y);
@@ -701,7 +715,9 @@ export function generateReceipt(docData, logoDataUrl, stampDataUrl, signatureDat
   const items = hasItems
     ? docData.items
     : [{
-        description: docData.invoiceRef?.trim() ? `Payment for Invoice ${docData.invoiceRef}` : "Payment Received",
+        description: docData.invoiceRef?.trim()
+          ? `${docData.paymentType === "deposit" ? "Deposit" : docData.paymentType === "balance" ? "Balance payment" : "Payment"} for Invoice ${docData.invoiceRef}`
+          : "Payment Received",
         qty: 1, unit: "l/s", unitPrice: docData.amount || 0,
       }];
 
