@@ -27,6 +27,7 @@ const STATUS_PILL = {
   Received:  "bg-blue-100 text-blue-700",
   Overdue:   "bg-red-100 text-red-600",
   Pending:   "bg-yellow-100 text-yellow-700",
+  "Deposit Paid": "bg-cyan-100 text-cyan-700",
   Rejected:  "bg-gray-100 text-gray-500",
   Cancelled: "bg-gray-100 text-gray-400",
 };
@@ -176,7 +177,7 @@ function StatementTab({ data }) {
 
 // ── Debtor Aging ──────────────────────────────────────────────────────────────
 function AgingTab({ data }) {
-  const unpaid = data.invRows.filter(r => r.Status === "Pending" || r.Status === "Overdue");
+  const unpaid = data.invRows.filter(r => r.Status === "Pending" || r.Status === "Overdue" || r.Status === "Deposit Paid");
 
   const clientMap = {};
   unpaid.forEach(r => {

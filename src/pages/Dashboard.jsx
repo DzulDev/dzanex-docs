@@ -8,7 +8,7 @@ import { fmtMYR } from "../utils/fmt";
 
 const DOC_TYPES = [
   { key: "Quotation", label: "Quotation",       icon: FileText,     path: "/quotation", statuses: ["Pending", "Accepted", "Rejected"] },
-  { key: "Invoice",   label: "Invoice",          icon: Receipt,      path: "/invoice",   statuses: ["Pending", "Paid", "Overdue"] },
+  { key: "Invoice",   label: "Invoice",          icon: Receipt,      path: "/invoice",   statuses: ["Pending", "Deposit Paid", "Paid", "Overdue"] },
   { key: "PO",        label: "Purchase Order",   icon: ShoppingCart, path: "/po",        statuses: ["Pending", "Deposit Paid", "Paid", "Received", "Cancelled"] },
   { key: "DO",        label: "Delivery Order",   icon: Truck,        path: "/do",        statuses: ["Pending", "Delivered", "Cancelled"] },
   { key: "PV",        label: "Payment Voucher",  icon: Wallet,       path: "/pv",        statuses: ["Pending", "Paid", "Cancelled"] },
@@ -165,7 +165,9 @@ setAllData({ Quotation: qt, Invoice: inv, PO: po, DO: doRows, PV: pv, Receipt: r
   // Financial metrics
   const pendingINVValue = allData.Invoice.filter(r => !r.Status || r.Status === "Pending").reduce((s, r) => s + (parseFloat(r.Total) || 0), 0);
   const overdueINVValue = allData.Invoice.filter(r => r.Status === "Overdue").reduce((s, r) => s + (parseFloat(r.Total) || 0), 0);
-  const toCollect       = pendingINVValue + overdueINVValue;
+  // Deposit Paid invoices are still owed the balance (deposit amount isn't tracked, so full total is counted)
+  const depositINVValue = allData.Invoice.filter(r => r.Status === "Deposit Paid").reduce((s, r) => s + (parseFloat(r.Total) || 0), 0);
+  const toCollect       = pendingINVValue + overdueINVValue + depositINVValue;
 
   const paidThisMonth   = allData.Invoice
     .filter(r => r.Status === "Paid" && (r.Date || "").startsWith(selectedMonth))
