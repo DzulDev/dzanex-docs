@@ -259,7 +259,8 @@ export default function Layout({ children }) {
                   </div>
                   <ul className="text-xs text-gray-500 space-y-1.5 ml-1">
                     <li>Convert QT → Invoice for the <span className="font-semibold text-gray-700">full amount</span> — client already agreed to the price.</li>
-                    <li>Write the deposit in <span className="font-semibold text-gray-700">Payment Terms</span>, e.g. <span className="font-mono text-gray-700">Deposit: MYR 500.00 (50%). Balance MYR 500.00 on delivery.</span></li>
+                    <li>On the quotation, type the <span className="font-semibold text-gray-700">Deposit (%)</span> in the totals panel. If Payment Terms is empty, it is filled for you, e.g. <span className="font-mono text-gray-700">Deposit: MYR 500.00 (50%) upon confirmation. Balance MYR 500.00 upon delivery.</span> Terms you type yourself are never overwritten.</li>
+                    <li>The deposit % carries over to the invoice and pre-fills the amount in the Deposit Received popup.</li>
                     <li>When deposit arrives: set invoice status to <span className="font-semibold text-gray-700">Deposit Paid</span>. A popup asks for the <span className="font-semibold text-gray-700">deposit amount</span> and creates a deposit receipt (<span className="font-mono text-gray-700">REC-2026-005-D</span>) for you.</li>
                     <li>The invoice PDF then shows <span className="font-semibold text-gray-700">Deposit Paid</span> and <span className="font-semibold text-gray-700">Balance Due</span> lines — click Open PDF to get the updated copy for the client.</li>
                     <li>After delivery, balance arrives: mark invoice <span className="font-semibold text-gray-700">Paid</span>. The popup creates the <span className="font-semibold text-gray-700">balance receipt</span> (invoice total − deposit) automatically.</li>

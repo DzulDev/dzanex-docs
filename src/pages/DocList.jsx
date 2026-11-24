@@ -343,7 +343,10 @@ export default function DocList({ sheetName, title }) {
       const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
       setDepositPrompt({
         row, total: t.total || parseFloat(row["Total"]) || 0,
-        amount: t.deposit > 0 ? String(t.deposit) : "", date: dateStr,
+        amount: t.deposit > 0
+          ? String(t.deposit)
+          : (Number(getPrefill(row)?.depositPercent) > 0 ? (t.total * Number(getPrefill(row).depositPercent) / 100).toFixed(2) : ""),
+        date: dateStr,
         paymentMethod: "Bank Transfer", reference: "", createReceipt: true,
       });
       return;

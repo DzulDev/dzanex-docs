@@ -31,7 +31,8 @@ export default function DocForm({
     validUntil:   "",
     taxRate:      initialData?.taxRate      ?? 0,
     discount:     initialData?.discount     ?? 0,
-    subject:      initialData?.subject      || "",
+    depositPercent: initialData?.depositPercent ?? 0,
+    subject:     initialData?.subject      || "",
     paymentTerms: initialData?.paymentTerms || "",
     notes:        initialData?.notes        || "",
     terms:        DEFAULT_TERMS.map(t => ({ ...t })),
@@ -48,7 +49,12 @@ export default function DocForm({
   }
 
   function handleSave(action) {
-    onSave({ ...form, _action: action });
+    let data = { ...form, _action: action };
+    // Quotation with a deposit % and no hand-written payment terms → write the terms for you
+    if (showDiscount && depositAmt > 0 && !String(form.paymentTerms || "").trim()) {
+      data.paymentTerms = `Deposit: MYR ${fmt2(depositAmt)} (${Number(form.depositPercent)}%) upon confirmation. Balance MYR ${fmt2(total - depositAmt)} upon delivery.`;
+    }
+    onSave(data);
   }
 
   const subtotal = form.items.reduce(
@@ -59,6 +65,7 @@ export default function DocForm({
   const afterDiscount = subtotal - discountAmt;
   const tax = afterDiscount * (Number(form.taxRate) / 100);
   const total = afterDiscount + tax;
+  const depositAmt = total * (Number(form.depositPercent) || 0) / 100;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -221,6 +228,20 @@ export default function DocForm({
                 />
               </div>
             )}
+            {showDiscount && (
+              <div className="flex items-center justify-between pb-1 border-b border-gray-100">
+                <label className="text-sm text-gray-600">Deposit (%)</label>
+                <input
+                  type="number"
+                  className="w-24 input text-right py-1 text-sm"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={form.depositPercent}
+                  onChange={(e) => set("depositPercent", e.target.value)}
+                />
+              </div>
+            )}
             <div className="flex justify-between text-sm text-gray-600">
               <span>Total</span>
               <span>MYR {fmt2(subtotal)}</span>
@@ -243,6 +264,18 @@ export default function DocForm({
               <span>Total Amount</span>
               <span>MYR {fmt2(total)}</span>
             </div>
+            {depositAmt > 0 && (
+              <div className="text-xs text-gray-500 space-y-1">
+                <div className="flex justify-between">
+                  <span>Deposit required ({Number(form.depositPercent)}%)</span>
+                  <span>MYR {fmt2(depositAmt)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Balance on delivery</span>
+                  <span>MYR {fmt2(total - depositAmt)}</span>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
