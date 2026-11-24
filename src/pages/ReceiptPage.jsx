@@ -33,9 +33,11 @@ export default function ReceiptPage() {
     reference:     "",
     items:         fromState?.items?.length ? fromState.items : [{ description: "", qty: 1, unit: "unit", unitPrice: 0, notes: "", isBold: false }],
     notes:         "",
+    discount:      Number(fromState?.discount) || 0,
   });
 
-  const subtotal = form.items.reduce((s, i) => s + Number(i.qty || 0) * Number(i.unitPrice || 0), 0);
+  const gross = form.items.reduce((s, i) => s + Number(i.qty || 0) * Number(i.unitPrice || 0), 0);
+  const subtotal = gross * (1 - Number(form.discount || 0) / 100); // net amount received, after discount
 
   useEffect(() => {
     async function init() {

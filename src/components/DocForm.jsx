@@ -231,7 +231,7 @@ export default function DocForm({
                 <span>MYR {fmt2(tax)}</span>
               </div>
             )}
-            {showDiscount && (
+            {(showDiscount || Number(form.discount) > 0) && (
               <div className="flex justify-between text-sm text-gray-600">
                 <span>Discount ({form.discount}%)</span>
                 <span className={Number(form.discount) > 0 ? "text-red-500" : ""}>

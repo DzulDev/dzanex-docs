@@ -706,6 +706,7 @@ export function generateReceipt(docData, logoDataUrl, stampDataUrl, signatureDat
       }];
 
   doc.__taxRate = 0;
+  doc.__discount = hasItems ? (Number(docData.discount) || 0) : 0;
   const { finalY } = addItemsTable(doc, items, y, true, "Total Received");
   y = finalY + 8;
 

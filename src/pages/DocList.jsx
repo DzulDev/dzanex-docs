@@ -44,6 +44,7 @@ function invoiceToReceiptPrefill(prefill, row) {
     client:    prefill?.to?.name || row["Client"] || "",
     invoiceRef: row["Doc No"] || "",
     items: (prefill?.items || []).filter(i => i.description?.trim()),
+    discount: Number(prefill?.discount) || 0,
   };
 }
 
@@ -186,12 +187,14 @@ async function autoCreateReceipt(row, paymentMethod, reference, date) {
 
   const today   = date || (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; })();
   const client  = prefill?.to?.name || row["Client"] || "";
-  const amount  = prefill?.items?.reduce((s, i) => s + Number(i.qty||0)*Number(i.unitPrice||0), 0)?.toFixed(2) || row["Total"] || "0.00";
+  const discount = Number(prefill?.discount) || 0;
+  const gross   = prefill?.items?.reduce((s, i) => s + Number(i.qty||0)*Number(i.unitPrice||0), 0);
+  const amount  = (gross != null ? (gross * (1 - discount / 100)).toFixed(2) : null) || row["Total"] || "0.00";
 
   const items = (prefill?.items || []).filter(i => i.description?.trim());
 
   const docData = {
-    docNo: receiptDocNo, date: today, client, amount,
+    docNo: receiptDocNo, date: today, client, amount, discount,
     paymentMethod: paymentMethod || "Bank Transfer",
     invoiceRef: invoiceDocNo,
     items, reference: reference || "", notes: "",
